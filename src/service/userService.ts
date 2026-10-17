@@ -5,9 +5,11 @@ import { UserResponse } from '../dtos/response/userResponseDto';
 import { UpdateUserInput } from '../dtos/input/userInputDto';
 import AppError from '../errors/AppError';
 import CloudinaryStorageService from './storage/cloudinaryStorageService';
+import { GroupRepository } from '../repository/groupRepository';
 export class UserService {
   constructor(
     private userRepository: UserRepository,
+    private groupRepository: GroupRepository,
     private cloudinaryStorageService: CloudinaryStorageService
   ) {}
 
@@ -80,11 +82,24 @@ export class UserService {
 
   async deleteUser(userId: string) {
     
-    const deletedUser = await this.userRepository.delete(userId);
-    if (!deletedUser) {
+    const currentUser = await this.userRepository.findById(userId);
+    if (!currentUser) {
       throw new AppError('Usuario no encontrado para eliminar', 404);
     }
+
+    const deletedUser = await this.userRepository.delete(userId);
+    if (!deletedUser) {
+      throw new AppError('El usuario no se pudo eliminar', 404);
+    }
+
+    if (currentUser.profilePicture?.path) {
+      await this.cloudinaryStorageService.delete(currentUser.profilePicture?.path);
+    } 
+
+    await this.groupRepository.removeMemberFromAllGroups(currentUser._id.toString());
+
     return deletedUser;
+    
   }
 
 }
