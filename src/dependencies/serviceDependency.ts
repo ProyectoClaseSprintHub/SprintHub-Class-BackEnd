@@ -11,7 +11,7 @@ const cloudinary = new CloudinaryStorageService();
 
 export const services = {
   cloudinary,
-  user: new UserService(r.user,cloudinary),
+  user: new UserService(r.user,r.group,r.card,cloudinary),
   group: new GroupService(r.group, r.user, cloudinary),
   board: new BoardService(r.board, r.group, r.column),
   column: new ColumnService(r.column, r.board, r.group),
