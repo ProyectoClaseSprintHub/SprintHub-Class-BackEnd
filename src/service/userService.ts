@@ -6,10 +6,12 @@ import { UpdateUserInput } from '../dtos/input/userInputDto';
 import AppError from '../errors/AppError';
 import CloudinaryStorageService from './storage/cloudinaryStorageService';
 import { GroupRepository } from '../repository/groupRepository';
+import { CardRepository } from '../repository/cardRepository';
 export class UserService {
   constructor(
     private userRepository: UserRepository,
     private groupRepository: GroupRepository,
+    private cardRepository: CardRepository,
     private cloudinaryStorageService: CloudinaryStorageService
   ) {}
 
@@ -97,6 +99,8 @@ export class UserService {
     } 
 
     await this.groupRepository.removeMemberFromAllGroups(currentUser._id.toString());
+
+    await this.cardRepository.unassignUserFromAllCards(currentUser._id.toString());
 
     return deletedUser;
     
