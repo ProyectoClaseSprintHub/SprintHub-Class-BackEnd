@@ -115,4 +115,13 @@ export class CardRepository{
     return {groupId, boardId};
   }
 
+  async unassignUserFromAllCards(userId: string): Promise<boolean> {
+    const result = await CardModel.updateMany(
+      { assignedTo: userId },
+      { $set: { assignedTo: null } }
+    ).exec();
+
+    return result.modifiedCount > 0;
+  }
+
 }

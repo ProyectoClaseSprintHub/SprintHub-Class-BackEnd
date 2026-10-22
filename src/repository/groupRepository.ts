@@ -24,6 +24,16 @@ export class GroupRepository {
       .exec();
   }
 
+async removeMemberFromAllGroups(userId: string): Promise<boolean> {
+  const result = await GroupModel.updateMany(
+    { 'members.user': userId },
+    { $pull: { members: { user: userId } } }
+  ).exec();
+
+  return result.modifiedCount > 0;
+
+}
+
   async create(
   data: Pick<IGroup, 'name' | 'description' | 'profilePicture'>,
   creatorId: string,
