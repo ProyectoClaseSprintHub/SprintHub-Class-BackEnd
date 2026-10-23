@@ -7,7 +7,7 @@ const UserSchema= new Schema(
             name: {type:String, required: true },
             email: {type:String, required: true, unique:true },
             document: {type:String, required: true, unique:true },
-            passwordHash:{type: String, requiered: true},
+            passwordHash:{type: String, required: true},
             profilePicture: { 
                 path: {type:String},
                 fileName: {type: String},

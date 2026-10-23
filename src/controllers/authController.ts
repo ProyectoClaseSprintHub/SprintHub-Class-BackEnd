@@ -1,0 +1,47 @@
+import {Request,response,Response} from "express";
+import { AuthService } from "../service/authService";
+import { loginInput,  loginInputSchema,  registerInputSchema } from "../dtos/input/authinputDto";
+
+export class AuthController {
+    constructor(private readonly authService: AuthService){}
+        async register(req:Request, res: Response){
+            try{
+                const file = req.file
+                ?{filename: req.file.originalname, buffer : req.file.buffer}
+                : undefined;
+
+                const data = await registerInputSchema.parseAsync({...req.body,...(file&& {profilePicture: file})});
+
+                await this.authService.register(data);
+                res.status(200).json({message: 'Usuario registrado exitosamente'});
+
+            }catch(error:any){
+                res.status(error.statusCode || 500).json({message:error.message || 'Error en el servidor al registrar usuario'});
+
+
+            }
+
+        }
+
+        async login (req: Request, res:Response){
+    try{
+        const validation = loginInputSchema.safeParse(req.body);
+        if(!validation.success){
+            res.status(400).json({message: 'Credenciales invalidas', error: validation.error.format() })
+            return;
+        }
+
+        const result = await this.authService.login(validation.data);
+        res.json({
+            message: 'sesion iniciada correctamente',
+            token: result.token,
+            user:result.user
+        });
+
+    }catch(error: any){
+        res.status(error.statusCode || 500).json({message:error.message || 'Error en el servidor al iniciar sesion'});
+
+    }
+}
+    
+}
