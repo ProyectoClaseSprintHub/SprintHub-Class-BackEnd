@@ -4,7 +4,6 @@ import AppError from "../errors/AppError";
 import ValidationError from "../errors/ValidationError";
 import { BoardMapper } from "../mappers/boardMapper";
 import { BoardRepository } from "../repository/boardRepository";
-import { ColumnRepository } from "../repository/columnRepository";
 import { GroupRepository } from "../repository/groupRepository";
 
 
@@ -13,7 +12,6 @@ export class BoardService{
     constructor(
         private readonly boardRepository: BoardRepository,
         private readonly groupRepository: GroupRepository,
-        private readonly columnRepository:ColumnRepository
     ){}
 
     async findByGroupId(groupId: string, userId: string): Promise<BoardResponse[]>{

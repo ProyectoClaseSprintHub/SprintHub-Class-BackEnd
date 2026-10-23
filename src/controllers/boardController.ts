@@ -6,7 +6,7 @@ import { createBoardInputSchema, updateBoardInputSchema } from "../dtos/input/bo
 export class BoardController{
   constructor(private boardService: BoardService){}
 
-  async findGroupId(req: Request, res:Response, next: NextFunction){
+  async findByGroupId(req: Request, res:Response, next: NextFunction){
     try{
       const userId = req.user.userId;
       const groupId = mongoIdSchema.parse(req.params.groupId);
