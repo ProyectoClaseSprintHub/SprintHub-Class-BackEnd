@@ -2,7 +2,7 @@ import { Router } from "express";
 import { controllers } from "../dependencies/controllerDependency";
 import { uploadToCloudinary } from "../middlewares/uploadMiddleware";
 
-const authController =  controllers.auth;
+const authController = controllers.auth;
 
 const router = Router();
 

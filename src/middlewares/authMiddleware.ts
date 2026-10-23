@@ -1,4 +1,4 @@
-import { Request , Response, NextFunction } from "express"; 
+import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import env from "../config/env";
 import AppError from "../errors/AppError";
@@ -9,17 +9,17 @@ interface JwtPayLoad {
 
 export const requireAuth = (
     req: Request,
-    res: Response, 
+    res: Response,
     next: NextFunction,
 ) => {
     try {
         const authHeader = req.headers.authorization;
-        if(!authHeader){
+        if (!authHeader) {
             throw new AppError('Token no proporcionado', 401);
         }
 
         const [type, token] = authHeader.split('');
-        if(type !== 'Bearer' || !token){
+        if (type !== 'Bearer' || !token) {
             throw new AppError('El formato de Token invalido', 401);
         }
 
