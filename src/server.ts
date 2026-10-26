@@ -2,7 +2,7 @@ import app from './app';
 import env from './config/env';
 import { connectDatabase } from './config/database';
 import { createServer } from 'http';
-import { configureSockets } from './sockets/socket';
+import { configureSockets    } from './sockets/socket';
 
 async function startserver(): Promise<void> {
     await connectDatabase();
