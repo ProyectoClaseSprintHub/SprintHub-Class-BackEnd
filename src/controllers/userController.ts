@@ -54,11 +54,10 @@ export class UserController {
 
       const userId = req.user.userId;
 
-      const deletedUser = await this.userService.deleteUser(userId);
+      await this.userService.deleteUser(userId);
 
       return res.status(200).json({
         message: 'Usuario eliminado',
-        data: deletedUser,
       });
     } catch (error: any) {
       return res.status(400).json({ message: error.message });
