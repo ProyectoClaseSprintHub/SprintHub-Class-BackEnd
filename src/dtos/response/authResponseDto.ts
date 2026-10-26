@@ -1,8 +1,8 @@
 import { UserResponse } from "./userResponseDto";
 
 export type AuthLoginResponse = {
-    token: string;
-    user: Omit<UserResponse, 'document' | 'createdAt'>;
+  token: string;
+  user: Omit<UserResponse, 'document' | 'createdAt'>;
 };
 
 export type AuthRegisterResponse = {

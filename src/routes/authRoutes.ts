@@ -1,6 +1,6 @@
-import { Router } from "express";
-import { controllers } from "../dependencies/controllerDependency";
-import { uploadToCloudinary } from "../middlewares/uploadMiddleware";
+import { Router } from 'express';
+import { controllers } from '../dependencies/controllerDependency';
+import { uploadToCloudinary } from '../middlewares/uploadMiddleware';
 
 const authController = controllers.auth;
 

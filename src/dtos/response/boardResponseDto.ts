@@ -2,7 +2,7 @@ import { IBoard } from "../../models/Board";
 import { ColumnDetailsResponse, ColumnWithDetails } from "./columnResponseDto";
 
 export type BoardWhitDetails = IBoard & {
-  columns: ColumnWithDetails[]
+columns: ColumnWithDetails[]
 };
 
 export type BoardResponse = {
@@ -19,3 +19,4 @@ export interface BoardDetailsResponse {
   groupId: string;
   columns: ColumnDetailsResponse[]
 }
+

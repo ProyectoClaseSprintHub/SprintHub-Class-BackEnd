@@ -29,3 +29,4 @@ export type IBoard = InferSchemaType<typeof BoardSchema> & {
 };
 
 export const BoardModel = mongoose.model<IBoard>('Board', BoardSchema);
+  

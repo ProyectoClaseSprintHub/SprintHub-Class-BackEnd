@@ -54,7 +54,7 @@ export const uploadFileInputRequestSchema = z.object({
   const detectedType = await fileTypeFromBuffer(file.buffer);
   if (!detectedType || !ALLOWED_MIMES.includes(detectedType.mime)) {
     ctx.addIssue({
-        code: 'custom',
+    	code: 'custom',
       message: 'Formato de archivo no válido o contenido corrupto.'
     });
   }
@@ -73,3 +73,4 @@ export const uploadFileInputRequestSchema = z.object({
 });
 
 export type UploadFileInputRequest = z.infer<typeof uploadFileInputRequestSchema>;
+

@@ -1,7 +1,7 @@
 import z from 'zod';
 
-const JwtPayLoadSchema = z.object({
+const JwtPayloadSchema = z.object({
     userId: z.string(),
 });
 
-export type JwtPayLoad = z.infer<typeof JwtPayLoadSchema>;
+export type JwtPayload = z.infer<typeof JwtPayloadSchema>;

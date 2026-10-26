@@ -1,3 +1,4 @@
+// Usa llaves y el nombre exacto que tienes en tu archivo User.ts
 import { IUser, UserModel } from '../models/User';
 
 export class UserRepository {
