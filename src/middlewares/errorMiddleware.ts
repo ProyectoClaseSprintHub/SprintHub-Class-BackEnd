@@ -19,19 +19,19 @@ export const errorMiddleware = (
 
     if(error instanceof AppError){
         res.status(error.statusCode).json({
-            messaje: error.message
+            message: error.message
         });
         return;
     }
     if(error instanceof ValidationError){
         res.status(500).json({
-            messaje: error.message
+            message: error.message
         });
         return;
     }
     if(error instanceof DatabaseError){
         res.status(500).json({
-            messaje: error.message
+            message: error.message
         });
         return;
     }
@@ -39,6 +39,6 @@ export const errorMiddleware = (
     console.error(error);
     res.sendStatus(500).json({
         message: 'Error interno del servidor'
-    })
-    
+    });
+
 }

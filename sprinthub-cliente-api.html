@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SprintHub Client — API REST + Socket.IO</title>
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="%230d0e12"/><polygon points="13.5,3 6,13.5 11,13.5 10,21 18,10 12.8,10" fill="%233b82f6"/></svg>'>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+<style>
+:root{
+  --mono: ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --bg:#0d0e12; --panel:#13161c; --panel2:#1a1e26; --input:#0f1218;
+  --border:#232833; --border-soft:#1d2129;
+  --text:#edf0f5; --text2:#a8b1bf; --text3:#757f8e;
+  --accent:#3b82f6; --accent2:#7ab3ff; --accent-soft:rgba(59,130,246,.14);
+  --ok:#34d399;  --ok-soft:rgba(52,211,153,.13);
+  --warn:#fbbf24;--warn-soft:rgba(251,191,36,.13);
+  --err:#f87171; --err-soft:rgba(248,113,113,.13);
+  --info:#38bdf8;--info-soft:rgba(56,189,248,.12);
+  --m-get:#4ade80;  --m-get-bg:rgba(74,222,128,.12);
+  --m-post:#fbbf24; --m-post-bg:rgba(251,191,36,.12);
+  --m-put:#7ab3ff;  --m-put-bg:rgba(122,179,255,.12);
+  --m-del:#f87171;  --m-del-bg:rgba(248,113,113,.12);
+  --m-patch:#c4b5fd;--m-patch-bg:rgba(196,181,253,.12);
+  --m-ws:#38bdf8;   --m-ws-bg:rgba(56,189,248,.12);
+  --hl-str:#9ed19e; --hl-bool:#d8b4fe;
+}
+html[data-theme="light"]{
+  --bg:#f2f3f6; --panel:#ffffff; --panel2:#f6f7f9; --input:#ffffff;
+  --border:#e1e4ea; --border-soft:#e9ebef;
+  --text:#1a1e26; --text2:#4d5563; --text3:#8b93a2;
+  --accent:#2563eb; --accent2:#1d4ed8; --accent-soft:rgba(37,99,235,.10);
+  --ok:#059669;  --ok-soft:rgba(5,150,105,.10);
+  --warn:#b45309; --warn-soft:rgba(217,119,6,.12);
+  --err:#dc2626;  --err-soft:rgba(220,38,38,.10);
+  --info:#0284c7;  --info-soft:rgba(2,132,199,.10);
+  --m-get:#059669;  --m-get-bg:rgba(5,150,105,.10);
+  --m-post:#b45309; --m-post-bg:rgba(217,119,6,.10);
+  --m-put:#2563eb;  --m-put-bg:rgba(37,99,235,.10);
+  --m-del:#dc2626;  --m-del-bg:rgba(220,38,38,.10);
+  --m-patch:#7c3aed;--m-patch-bg:rgba(124,58,237,.10);
+  --m-ws:#0284c7;   --m-ws-bg:rgba(2,132,199,.10);
+  --hl-str:#116d35; --hl-bool:#8250df;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:13px;background:var(--bg);color:var(--text);overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--text);background:var(--input);border:1px solid var(--border);border-radius:6px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+::selection{background:var(--accent-soft)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:6px;border:2px solid var(--panel)}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- Topbar ---------- */
+.topbar{height:48px;display:flex;align-items:center;gap:12px;padding:0 14px;border-bottom:1px solid var(--border);background:var(--panel);flex-shrink:0}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:14px;color:var(--text)}
+.brand .logo{width:23px;height:23px;border-radius:6px;background:var(--accent);display:grid;place-items:center;flex-shrink:0}
+.brand .logo svg{display:block}
+.brand .tag{font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:2px 7px;border-radius:99px;letter-spacing:.03em}
+.env-chip{display:flex;align-items:center;gap:7px;padding:5px 11px;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:12px;background:var(--panel2);font-family:var(--mono)}
+.env-chip:hover{border-color:var(--accent);color:var(--text)}
+.env-chip .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.pill-top{display:flex;align-items:center;gap:7px;padding:4px 11px;border-radius:99px;font-size:11px;font-weight:600;border:1px solid var(--border);color:var(--text3);background:var(--panel2)}
+.pill-top .d{width:7px;height:7px;border-radius:50%;background:var(--text3)}
+.pill-top.on{color:var(--ok);border-color:transparent;background:var(--ok-soft)}
+.pill-top.on .d{background:var(--ok)}
+.pill-top.err{color:var(--err);border-color:transparent;background:var(--err-soft)}
+.pill-top.err .d{background:var(--err)}
+.pill-top.wconn{color:var(--warn);border-color:transparent;background:var(--warn-soft)}
+.pill-top.wconn .d{background:var(--warn)}
+.icon-btn{width:30px;height:30px;border-radius:6px;display:grid;place-items:center;color:var(--text2)}
+.icon-btn:hover{background:var(--panel2);color:var(--text)}
+
+/* ---------- Layout ---------- */
+.app{display:flex;height:calc(100vh - 48px)}
+
+/* ---------- Sidebar ---------- */
+.sidebar{width:272px;min-width:272px;border-right:1px solid var(--border);background:var(--panel);display:flex;flex-direction:column}
+.side-search{padding:10px 10px 4px}
+.side-search input{width:100%;padding:7px 10px;font-size:12.5px}
+.side-scroll{flex:1;overflow-y:auto;padding-bottom:24px}
+.side-label{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 5px;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--text3);font-weight:700}
+.side-label button{font-size:10.5px;color:var(--text3);padding:2px 6px;border-radius:4px}
+.side-label button:hover{color:var(--err)}
+.folder summary{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;list-style:none;color:var(--text2);font-weight:600;font-size:12.5px;border-radius:6px;margin:1px 8px;user-select:none}
+.folder summary::-webkit-details-marker{display:none}
+.folder summary:hover{background:var(--panel2);color:var(--text)}
+.folder summary:active{background:var(--accent-soft)}
+.folder .caret{transition:transform .15s;font-size:9px;color:var(--text3);width:10px}
+.folder[open] summary .caret{transform:rotate(90deg)}
+.folder summary .cnt{margin-left:auto;font-size:10px;color:var(--text3);font-weight:500;font-family:var(--mono)}
+.req-item{display:flex;align-items:center;gap:9px;padding:5px 12px 5px 22px;cursor:pointer;color:var(--text2);border-left:2px solid transparent;user-select:none}
+.req-item:hover{background:var(--panel2);color:var(--text)}
+.req-item.active{background:var(--accent-soft);border-left-color:var(--accent);color:var(--text)}
+.req-item .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;font-size:12.5px}
+.chip{font-size:9.5px;font-weight:700;letter-spacing:.05em;min-width:46px;text-align:center;padding:2.5px 5px;border-radius:4px;flex-shrink:0}
+.m-GET{color:var(--m-get);background:var(--m-get-bg)} .m-POST{color:var(--m-post);background:var(--m-post-bg)}
+.m-PUT{color:var(--m-put);background:var(--m-put-bg)} .m-DELETE{color:var(--m-del);background:var(--m-del-bg)}
+.m-PATCH{color:var(--m-patch);background:var(--m-patch-bg)} .m-WS{color:var(--m-ws);background:var(--m-ws-bg)}
+.hist-item{display:flex;align-items:center;gap:8px;padding:5px 14px;cursor:pointer;color:var(--text2);border-left:2px solid transparent}
+.hist-item:hover{background:var(--panel2);color:var(--text)}
+.hist-item .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono);font-size:11.5px}
+.hist-item .st{font-size:10px;font-weight:700;font-family:var(--mono)}
+.st-2{color:var(--ok)} .st-3{color:var(--info)} .st-4{color:var(--warn)} .st-5{color:var(--err)} .st-0{color:var(--err)}
+.hist-item .tm{font-size:9.5px;color:var(--text3);font-family:var(--mono)}
+.empty{padding:16px 14px;color:var(--text3);font-size:12px;text-align:center;line-height:1.5}
+
+/* ---------- Workspace ---------- */
+.workspace{flex:1;min-width:0;overflow-y:auto;display:flex;flex-direction:column}
+.req-bar{display:flex;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border-soft);background:var(--panel);flex-wrap:wrap}
+.method-sel{width:100px;padding:8px 6px;font-weight:700;border-radius:6px}
+.ms-GET{color:var(--m-get);background:var(--m-get-bg)} .ms-POST{color:var(--m-post);background:var(--m-post-bg)}
+.ms-PUT{color:var(--m-put);background:var(--m-put-bg)} .ms-DELETE{color:var(--m-del);background:var(--m-del-bg)}
+.ms-PATCH{color:var(--m-patch);background:var(--m-patch-bg)}
+.url-input{flex:1;min-width:200px;padding:8px 11px;font-family:var(--mono);font-size:12.5px}
+.btn{padding:8px 16px;border-radius:6px;font-weight:600;font-size:12.5px;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+html[data-theme="light"] .btn-primary:hover{background:var(--accent)}
+.btn-primary:disabled{opacity:.55;cursor:wait}
+.btn-ghost{border:1px solid var(--border);color:var(--text2);background:var(--panel)}
+.btn-ghost:hover{color:var(--text);border-color:var(--accent)}
+.btn-ghost:disabled{opacity:.4;cursor:not-allowed}
+.tabs{display:flex;gap:2px;padding:0 10px;border-bottom:1px solid var(--border-soft);background:var(--panel)}
+.tab{padding:9px 13px;font-size:12.5px;color:var(--text3);border-bottom:2px solid transparent;font-weight:600}
+.tab:hover{color:var(--text2)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab .bdg{font-size:9.5px;font-weight:700;background:var(--panel2);border:1px solid var(--border);color:var(--text3);padding:1px 6px;border-radius:99px;margin-left:5px;font-family:var(--mono)}
+.tab .bdg.on{color:var(--accent);border-color:var(--accent)}
+.tpanel{padding:14px;display:none;animation:fade .12s ease}
+.tpanel.active{display:block}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+
+/* ---------- KV rows ---------- */
+.kv-head{display:grid;grid-template-columns:24px 1fr 2.2fr 88px 30px;gap:8px;padding:0 2px 6px;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);font-weight:700}
+.kv-row{display:grid;grid-template-columns:24px 1fr 2.2fr 88px 30px;gap:8px;margin-bottom:8px;align-items:center}
+.kv-check{width:16px;height:16px;accent-color:var(--accent);justify-self:center;cursor:pointer}
+.kv-k,.kv-v{padding:7px 9px;font-family:var(--mono);font-size:12px;min-width:0;width:100%}
+.kv-type{padding:7px 5px;font-size:11.5px}
+.kv-x{color:var(--text3);font-size:16px;width:28px;height:28px;border-radius:5px;line-height:1}
+.kv-x:hover{color:var(--err);background:var(--panel2)}
+.cell-empty{border:1px dashed var(--border);border-radius:6px;height:33px}
+.filewrap{display:flex;gap:7px;align-items:center;min-width:0}
+.filewrap .fname{color:var(--text3);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono)}
+.filewrap .pick{border:1px solid var(--border);border-radius:5px;padding:5px 9px;font-size:11px;color:var(--text2);white-space:nowrap}
+.filewrap .pick:hover{border-color:var(--accent);color:var(--text)}
+.add-kv{color:var(--accent);font-size:12px;font-weight:600;padding:5px 8px;border-radius:5px}
+.add-kv:hover{background:var(--accent-soft)}
+.auto-h{margin-top:14px;border:1px dashed var(--border);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--text3);max-width:720px;line-height:1.7}
+.auto-h b{color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.auto-h code{font-family:var(--mono);color:var(--ok);font-size:11.5px;word-break:break-all}
+
+/* ---------- Auth panel ---------- */
+.auth-panel{max-width:720px}
+.switch-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.switch-row input{width:16px;height:16px;accent-color:var(--accent)}
+.switch-row label{font-size:13px;font-weight:600;color:var(--text)}
+.token-area{width:100%;min-height:96px;font-family:var(--mono);font-size:12px;padding:10px;resize:vertical;line-height:1.5}
+.note{margin-top:10px;font-size:12px;color:var(--text3);line-height:1.6;max-width:720px}
+.note b{color:var(--text2)}
+.note code{font-family:var(--mono);background:var(--panel2);border:1px solid var(--border-soft);padding:1px 5px;border-radius:4px;font-size:11.5px}
+
+/* ---------- Body panel ---------- */
+.body-mode{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+.mode-sel{padding:7px 9px;font-size:12px}
+.json-tools{display:flex;gap:10px;margin-top:8px}
+textarea.json{width:100%;min-height:180px;resize:vertical;font-family:var(--mono);font-size:12.5px;line-height:1.55;padding:12px}
+.tool-btn{border:1px solid var(--border);border-radius:5px;padding:5px 10px;font-size:11.5px;color:var(--text2)}
+.tool-btn:hover{color:var(--text);border-color:var(--accent)}
+
+/* ---------- Docs ---------- */
+.docs{max-width:820px;line-height:1.6;font-size:12.8px;color:var(--text2)}
+.docs h4{font-size:14px;color:var(--text);margin:0 0 6px;font-weight:700}
+.docs h5{font-size:12.5px;color:var(--text);margin:18px 0 6px;font-weight:700}
+.docs p{margin:6px 0}
+.docs pre{background:var(--panel2);border:1px solid var(--border-soft);border-radius:6px;padding:11px 13px;font-family:var(--mono);font-size:12px;margin:8px 0;color:var(--text);white-space:pre-wrap;word-break:break-word}
+.docs ul{margin:6px 0 6px 18px}
+.docs li{margin:4px 0}
+.docs code{font-family:var(--mono);background:var(--panel2);border:1px solid var(--border-soft);padding:1px 5px;border-radius:4px;font-size:11.5px;color:var(--accent2)}
+.docs .req{color:var(--err);font-weight:700}
+.docs .ok2{color:var(--ok);font-weight:700}
+
+/* ---------- Response ---------- */
+.response{margin:10px 14px 14px;border:1px solid var(--border);border-radius:8px;background:var(--panel);overflow:hidden}
+.resp-bar{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border-soft);flex-wrap:wrap}
+.resp-title{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3)}
+.stat-pill{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:99px;font-family:var(--mono)}
+.stat-2{color:var(--ok);background:var(--ok-soft)} .stat-3{color:var(--info);background:var(--info-soft)}
+.stat-4{color:var(--warn);background:var(--warn-soft)} .stat-5{color:var(--err);background:var(--err-soft)}
+.stat-0{color:var(--err);background:var(--err-soft)} .stat-none{color:var(--text3);background:var(--panel2)}
+.resp-meta{font-size:11.5px;color:var(--text3);font-family:var(--mono)}
+.resp-tabs{margin-left:auto;display:flex;gap:2px}
+.resp-tab{padding:5px 10px;font-size:12px;color:var(--text3);border-radius:5px;font-weight:600}
+.resp-tab.active{color:var(--accent);background:var(--accent-soft)}
+.resp-copy{font-size:11.5px;color:var(--text3);border:1px solid var(--border);border-radius:5px;padding:4px 9px}
+.resp-copy:hover{color:var(--text);border-color:var(--accent)}
+.resp-body{max-height:460px;overflow:auto}
+.resp-body pre{padding:12px 14px;font-family:var(--mono);font-size:12.3px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.hl-k{color:var(--accent2)} .hl-s{color:var(--hl-str)} .hl-n{color:var(--warn)} .hl-b{color:var(--hl-bool)} .hl-null{color:var(--text3);font-style:italic}
+
+/* ---------- Socket ---------- */
+.sock-dot{width:10px;height:10px;border-radius:50%;background:var(--text3);flex-shrink:0}
+.sock-dot.on{background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft)}
+.sock-dot.err{background:var(--err);box-shadow:0 0 0 3px var(--err-soft)}
+.sock-dot.wconn{background:var(--warn);box-shadow:0 0 0 3px var(--warn-soft)}
+#sockToken{width:250px;font-family:var(--mono);font-size:11.5px;padding:8px 10px}
+.emit-row{display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap}
+#emitEvent{width:250px;font-family:var(--mono);font-size:12.5px;padding:8px 10px}
+#emitPayload{width:100%;min-height:160px;font-family:var(--mono);font-size:12.5px;padding:12px;line-height:1.55;resize:vertical}
+.ack-box{margin-top:12px;border:1px solid var(--border-soft);border-left:3px solid var(--info);background:var(--panel2);border-radius:6px;padding:10px 13px;font-family:var(--mono);font-size:12px;white-space:pre-wrap;word-break:break-word;display:none}
+.listen-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border-soft);border-radius:6px;margin-bottom:6px;max-width:820px}
+.listen-row .ev{font-family:var(--mono);font-size:12.5px;color:var(--info);min-width:150px;font-weight:700}
+.listen-row .de{flex:1;font-size:12px;color:var(--text3);line-height:1.45}
+.listen-row .ct{font-size:11px;font-weight:700;background:var(--panel2);border:1px solid var(--border);padding:2px 9px;border-radius:99px;color:var(--text2);font-family:var(--mono)}
+.listen-row.muted{opacity:.45}
+.listen-row input{width:15px;height:15px;accent-color:var(--accent)}
+.custom-listen{display:flex;gap:8px;margin:14px 0 4px;max-width:820px}
+.custom-listen input{flex:1;padding:8px 10px;font-family:var(--mono);font-size:12px}
+.custom-listen .btn{padding:8px 14px}
+
+/* ---------- Console ---------- */
+.console{margin:8px 14px 16px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--panel)}
+.console-bar{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border-soft)}
+.console-bar .t{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3)}
+.console-bar .n{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.console-bar .sp{flex:1}
+.console-bar button{font-size:11px;color:var(--text3);padding:3px 9px;border-radius:5px;border:1px solid var(--border)}
+.console-bar button:hover{color:var(--text);border-color:var(--accent)}
+.log{height:320px;overflow-y:auto;font-family:var(--mono);font-size:12px;padding:8px 0}
+.log-line{display:flex;gap:10px;padding:3px 12px;align-items:baseline}
+.log-line:hover{background:var(--panel2)}
+.log-t{color:var(--text3);font-size:10.5px;min-width:56px;flex-shrink:0}
+.log-dir{min-width:14px;text-align:center;font-weight:700;flex-shrink:0}
+.ld-out{color:var(--accent2)} .ld-in{color:var(--ok)} .ld-ack{color:var(--info)} .ld-info{color:var(--text3)} .ld-err{color:var(--err)}
+.log-ev{color:var(--text);font-weight:700;min-width:135px;word-break:break-all;flex-shrink:0}
+.log-d{color:var(--text2);white-space:pre-wrap;word-break:break-word;flex:1;min-width:0}
+.log-empty{padding:22px;text-align:center;color:var(--text3);font-size:12px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+
+/* ---------- Modal / Toasts ---------- */
+.modal-back{position:fixed;inset:0;background:rgba(5,7,10,.58);display:none;place-items:center;z-index:50}
+.modal-back.open{display:grid}
+.modal{width:440px;max-width:92vw;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.4)}
+.modal h3{font-size:14px;margin-bottom:4px}
+.modal .sub{font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.5}
+.modal label{font-size:12px;font-weight:600;color:var(--text2)}
+.modal input{width:100%;padding:9px 11px;font-family:var(--mono);font-size:12px;margin:6px 0 4px}
+.modal .row{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:60}
+.toast{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;padding:10px 14px;font-size:12.5px;box-shadow:0 10px 28px rgba(0,0,0,.38);max-width:360px;animation:tin .18s ease;line-height:1.45}
+.toast.ok{border-left-color:var(--ok)} .toast.err{border-left-color:var(--err)} .toast.warn{border-left-color:var(--warn)}
+.toast .tt{font-weight:700;font-size:11.5px;margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em}
+.toast.ok .tt{color:var(--ok)} .toast.err .tt{color:var(--err)} .toast.warn .tt{color:var(--warn)} .toast.info .tt{color:var(--info)}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (max-width:900px){ .sidebar{width:230px;min-width:230px} #sockToken{width:160px} }
+</style>
+</head>
+<body id="body">
+<header class="topbar">
+  <div class="brand">
+    <span class="logo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polygon points="13.5,2 5.5,14 11,14 9.8,22 18.5,9.5 12.6,9.5" fill="#fff"/></svg></span>
+    SprintHub <span class="tag">CLIENT</span>
+  </div>
+  <button class="env-chip" id="envChip" title="Configurar entorno"><span class="dot"></span><span id="envChipText">{{baseUrl}}</span></button>
+  <div class="top-right">
+    <button class="pill-top" id="sockPill" title="Estado Socket.IO"><span class="d"></span><span id="sockPillText">Socket: desconectado</span></button>
+    <button class="icon-btn" id="themeBtn" title="Cambiar tema (claro / oscuro)"><span id="themeIcon">☾</span></button>
+  </div>
+</header>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="side-search"><input id="searchInput" placeholder="Buscar peticiones…" spellcheck="false"></div>
+    <div class="side-scroll">
+      <div class="side-label"><span>Colecciones · SprintHub v2</span></div>
+      <div id="collectionsEl"></div>
+      <div class="side-label"><span>Historial</span><button id="clearHistBtn" title="Borrar historial">borrar</button></div>
+      <div id="historyListEl"></div>
+    </div>
+  </aside>
+
+  <main class="workspace" id="workspace">
+    <!-- ============ MODO HTTP ============ -->
+    <section id="httpMode">
+      <div class="req-bar">
+        <select class="method-sel ms-GET" id="methodSel">
+          <option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option><option>PATCH</option>
+        </select>
+        <input class="url-input" id="urlInput" placeholder="{{baseUrl}}/api/…" spellcheck="false">
+        <button class="btn btn-primary" id="sendBtn" title="Ctrl+Enter">Enviar</button>
+        <button class="btn btn-ghost" id="curlBtn" title="Copiar como comando cURL">cURL</button>
+      </div>
+      <div class="tabs" id="httpTabs">
+        <button class="tab" data-tab="params">Params<span class="bdg" id="paramsBdg">0</span></button>
+        <button class="tab" data-tab="auth">Auth</button>
+        <button class="tab" data-tab="headers">Headers</button>
+        <button class="tab" data-tab="body">Body<span class="bdg" id="bodyBdg">none</span></button>
+        <button class="tab" data-tab="docs">Docs</button>
+      </div>
+
+      <div class="tpanel" id="tp-params">
+        <div class="kv-head"><span></span><span>Clave</span><span>Valor</span><span></span><span></span></div>
+        <div id="paramsRows"></div>
+        <button class="add-kv" id="paramsAdd">+ Parámetro de query</button>
+      </div>
+
+      <div class="tpanel" id="tp-auth">
+        <div class="auth-panel">
+          <div class="switch-row"><input type="checkbox" id="authToggle" checked><label for="authToggle">Adjuntar token automáticamente (Authorization: Bearer)</label></div>
+          <textarea class="token-area" id="tokenArea" placeholder="Pega aquí el JWT…" spellcheck="false"></textarea>
+          <p class="note"><b>Tip:</b> el JWT se captura <b>automáticamente</b> al ejecutar <b>Auth → Login</b> y también alimenta la conexión Socket.IO. Si la API responde 401, revisa que el token sea válido y que el toggle esté activo.</p>
+        </div>
+      </div>
+
+      <div class="tpanel" id="tp-headers">
+        <div class="kv-head"><span></span><span>Clave</span><span>Valor</span><span></span><span></span></div>
+        <div id="headersRows"></div>
+        <button class="add-kv" id="headersAdd">+ Header</button>
+        <div class="auto-h" id="autoHeaders"><b>Se envían automáticamente</b><br><span id="autoHeadersList">—</span></div>
+      </div>
+
+      <div class="tpanel" id="tp-body">
+        <div class="body-mode">
+          <span style="font-size:12px;color:var(--text2)">Modo:</span>
+          <select class="mode-sel" id="bodyModeSel">
+            <option value="none">Sin body</option>
+            <option value="json">JSON (raw)</option>
+            <option value="form">form-data (multipart)</option>
+          </select>
+        </div>
+        <div id="bodyJsonWrap">
+          <textarea class="json" id="jsonArea" spellcheck="false" placeholder='{ "clave": "valor" }'></textarea>
+          <div class="json-tools">
+            <button class="tool-btn" id="beautifyBtn">Formatear JSON</button>
+            <button class="tool-btn" id="clearBodyBtn">Limpiar</button>
+          </div>
+        </div>
+        <div id="bodyFormWrap" hidden>
+          <div class="kv-head"><span></span><span>Clave</span><span>Valor</span><span>Tipo</span><span></span></div>
+          <div id="formRows"></div>
+          <button class="add-kv" id="formAdd">+ Campo</button>
+          <p class="note">Los archivos usan la clave <code>file</code> (multer <code>.single('file')</code> del backend). Formatos permitidos: PNG, JPG, JPEG, WEBP, MP3, WAV, OGG, M4A · máx 15 MB.</p>
+        </div>
+      </div>
+
+      <div class="tpanel" id="tp-docs"><div class="docs" id="docsBox"></div></div>
+
+      <div class="response" id="respWrap">
+        <div class="resp-bar">
+          <span class="resp-title">Respuesta</span>
+          <span class="stat-pill stat-none" id="respStatus">—</span>
+          <span class="resp-meta" id="respMeta">esperando una petición…</span>
+          <div class="resp-tabs">
+            <button class="resp-tab active" data-rt="body">Body</button>
+            <button class="resp-tab" data-rt="headers">Headers</button>
+          </div>
+          <button class="resp-copy" id="respCopy">Copiar</button>
+        </div>
+        <div class="resp-body" id="respBodyWrap"><pre id="respBody">// Ejecuta una petición para ver la respuesta aquí</pre></div>
+        <div class="resp-body" id="respHeadersWrap" hidden><pre id="respHeadersPre"></pre></div>
+      </div>
+    </section>
+
+    <!-- ============ MODO SOCKET ============ -->
+    <section id="socketMode" hidden>
+      <div class="req-bar">
+        <span class="sock-dot" id="sockDot"></span>
+        <input class="url-input" id="sockUrl" value="{{baseUrl}}" spellcheck="false" title="URL del servidor Socket.IO (mismo host que la API)">
+        <input id="sockToken" placeholder="JWT (se llena tras login)" spellcheck="false">
+        <button class="btn btn-primary" id="sockConnectBtn">Conectar</button>
+        <button class="btn btn-ghost" id="sockDisconnectBtn" disabled>Desconectar</button>
+      </div>
+      <div class="tabs" id="sockTabs">
+        <button class="tab" data-tab="emit">Emitir</button>
+        <button class="tab" data-tab="listen">Escuchar</button>
+        <button class="tab" data-tab="sdocs">Docs</button>
+      </div>
+
+      <div class="tpanel" id="tp-emit">
+        <div class="emit-row">
+          <input id="emitEvent" list="eventList" placeholder="evento (ej: card:create)" spellcheck="false">
+          <datalist id="eventList">
+            <option value="board:join"></option><option value="board:leave"></option>
+            <option value="column:create"></option><option value="column:update"></option><option value="column:delete"></option>
+            <option value="card:create"></option><option value="card:update"></option><option value="card:delete"></option>
+          </datalist>
+          <button class="btn btn-primary" id="emitBtn" title="Ctrl+Enter">Emitir evento</button>
+        </div>
+        <textarea id="emitPayload" spellcheck="false" placeholder='Payload JSON — los strings van con comillas: "64f0abc123…"'></textarea>
+        <div class="ack-box" id="ackBox"></div>
+        <p class="note"><b>Ack (callback):</b> los handlers del backend responden <code>{ ok: true|false, … }</code>. <code>board:leave</code> no envía ack (su timeout es normal).</p>
+      </div>
+
+      <div class="tpanel" id="tp-listen">
+        <p class="note" style="margin-top:0"><b>Eventos que emite el servidor</b> — broadcasts a la sala <code>board:&lt;boardId&gt;</code>. Solo llegan después de <code>board:join</code>. Desmarca un evento para ocultarlo de la consola.</p>
+        <div id="listenRows"></div>
+        <div class="custom-listen">
+          <input id="customEventInput" placeholder="Vigilar evento personalizado (ej: card:created)" spellcheck="false">
+          <button class="btn btn-ghost" id="customAddBtn">Vigilar</button>
+        </div>
+      </div>
+
+      <div class="tpanel" id="tp-sdocs"><div class="docs" id="sdocsBox"></div></div>
+
+      <div class="console">
+        <div class="console-bar">
+          <span class="t">Consola Socket.IO</span>
+          <span class="n" id="logCount">0 eventos</span>
+          <span class="sp"></span>
+          <button id="logClearBtn">Limpiar</button>
+        </div>
+        <div class="log" id="sockLog"><div class="log-empty">Sin actividad. Conecta el socket y únete a un tablero con <b>board:join</b>.</div></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ============ Modal entorno ============ -->
+<div class="modal-back" id="envModalBack">
+  <div class="modal">
+    <h3>Entorno</h3>
+    <p class="sub">La variable <code style="font-family:var(--mono)">{{baseUrl}}</code> se usa en todas las URLs de la colección y en el Socket.IO.</p>
+    <label>URL base de la API</label>
+    <input id="envUrlInput" spellcheck="false">
+    <p class="sub" style="margin-top:8px">El backend v2 usa <code style="font-family:var(--mono)">cors()</code> abierto: puedes probar desde un archivo local. Si tu API restringe orígenes, agrega el origen de esta página a su CORS.</p>
+    <div class="row">
+      <button class="btn btn-ghost" id="envCancel">Cancelar</button>
+      <button class="btn btn-primary" id="envSave">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toastWrap"></div>
+<script>
+'use strict';
+
+/* ================= Estado persistente ================= */
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+let env     = store.get('sh2_env', { baseUrl: 'http://localhost:3000' });
+let token   = store.get('sh2_token', '');
+let authOn  = store.get('sh2_authOn', true);
+let history = store.get('sh2_history', []);
+let theme   = store.get('sh2_theme', 'dark');
+
+let currentId    = null;
+let currentMode  = 'http';
+let socket       = null;
+let hiddenEvents = new Set();
+let counts       = {};
+let logTotal     = 0;
+let lastRespText = '';
+
+/* ================= Utilidades ================= */
+const $  = (sel, ctx) => (ctx || document).querySelector(sel);
+const $$ = (sel, ctx) => Array.from((ctx || document).querySelectorAll(sel));
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const nowTime = () => new Date().toTimeString().slice(0, 8);
+function fmtBytes(n){ if(n < 1024) return n + ' B'; if(n < 1048576) return (n/1024).toFixed(1) + ' KB'; return (n/1048576).toFixed(2) + ' MB'; }
+function resolveUrl(u){ return String(u).replace(/\{\{baseUrl\}\}/g, env.baseUrl).trim(); }
+function pretty(v, n){ try{ return JSON.stringify(v, null, (n === undefined ? 2 : n)); }catch(e){ return String(v); } }
+
+function toast(msg, type, title){
+  const wrap = $('#toastWrap');
+  const t = document.createElement('div');
+  t.className = 'toast ' + (type || 'info');
+  t.innerHTML = (title ? '<div class="tt">' + esc(title) + '</div>' : '') + esc(msg);
+  wrap.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .25s'; setTimeout(() => t.remove(), 260); }, 4200);
+}
+
+function highlightJson(obj){
+  const json = pretty(obj);
+  return esc(json).replace(
+    /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false)\b|\bnull\b|-?\d+(\.\d+)?([eE][+-]?\d+)?/g,
+    (m, s, c, b) => {
+      if (s) return c ? '<span class="hl-k">' + s + '</span>' + c : '<span class="hl-s">' + s + '</span>';
+      if (b) return '<span class="hl-b">' + m + '</span>';
+      if (m === 'null') return '<span class="hl-null">null</span>';
+      return '<span class="hl-n">' + m + '</span>';
+    }
+  );
+}
+
+/* ================= Colecciones (superficie real de SprintHub-Backend-v2) ================= */
+const COLLECTIONS = [
+{ id:'general', name:'General', items:[
+  { id:'health', name:'Health check', method:'GET', url:'{{baseUrl}}/api/health',
+    docs:`<h4>GET /api/health</h4>
+    <p>Endpoint público de verificación. No requiere token.</p>
+    <h5>Respuesta 200</h5>
+    <pre>{ "success": true, "message": "Api funcionando." }</pre>
+    <p>Úsalo para confirmar que el backend está corriendo antes de probar el resto de la colección.</p>` }
+]},
+{ id:'auth', name:'Autenticación', items:[
+  { id:'login', name:'Login', method:'POST', url:'{{baseUrl}}/api/auth/login', bodyMode:'json',
+    body:'{\n  "email": "demo@sprint.hub",\n  "password": "123456"\n}',
+    docs:`<h4>POST /api/auth/login</h4>
+    <p>Inicia sesión. La respuesta incluye el <b>JWT</b>, que este cliente captura automáticamente (toast azul) y usa en HTTP y Socket.IO.</p>
+    <h5>Cuerpo (JSON)</h5>
+    <pre>{ "email": "tu@correo.com", "password": "tu-clave" }</pre>
+    <h5>Respuesta 200</h5>
+    <pre>{
+  "message": "Sesión iniciada correctamente",
+  "token": "eyJhbGciOi…",
+  "user": { "_id": "…", "name": "…", "email": "…" }
+}</pre>
+    <h5>Errores</h5>
+    <ul><li><code>400</code> formato inválido de email o contraseña vacía</li><li><code>401</code> credenciales incorrectas</li></ul>` },
+  { id:'register', name:'Register (multipart + foto)', method:'POST', url:'{{baseUrl}}/api/auth/register', bodyMode:'form',
+    form:[ {k:'name', v:''}, {k:'email', v:''}, {k:'document', v:''}, {k:'password', v:''}, {k:'file', type:'file', v:''} ],
+    docs:`<h4>POST /api/auth/register</h4>
+    <p>Crea un usuario en <b>form-data (multipart)</b>: campos de texto + foto opcional con clave <code>file</code>.</p>
+    <h5>Campos</h5>
+    <pre>name       2-100 caracteres   (requerido)
+email      correo válido      (requerido)
+document   mínimo 5 caracteres (requerido)
+password   mínimo 6 caracteres (requerido)
+file       opcional · PNG/JPG/JPEG/WEBP/MP3/WAV/OGG/M4A · máx 15 MB</pre>
+    <h5>Respuesta 201</h5>
+    <pre>{ "message": "Usuario registrado exitosamente" }</pre>
+    <p>El registro <b>no</b> devuelve token: ejecuta <b>Login</b> a continuación.</p>` }
+]},
+{ id:'users', name:'Usuarios', items:[
+  { id:'users-me', name:'Mi perfil', method:'GET', url:'{{baseUrl}}/api/users/me',
+    docs:`<h4>GET /api/users/me</h4>
+    <p>Devuelve el usuario autenticado (lee el <code>userId</code> del JWT). Requiere <code>Authorization: Bearer</code>.</p>
+    <h5>Respuesta 200</h5>
+    <pre>{ "_id": "…", "name": "…", "email": "…", "document": "…", "profilePicture": "…" }</pre>
+    <p>Guarda el <code>_id</code>: lo necesitas para <b>Actualizar usuario</b> (PUT /api/users/:id).</p>
+    <p class="req">Requiere token (401 si falta o expira).</p>` },
+  { id:'users-update', name:'Actualizar usuario', method:'PUT', url:'{{baseUrl}}/api/users/:id', bodyMode:'form',
+    form:[ {k:'name', v:''}, {k:'email', v:''}, {k:'document', v:''}, {k:'password', v:''}, {k:'file', type:'file', v:''} ],
+    docs:`<h4>PUT /api/users/:id</h4>
+    <p>Actualiza tu usuario (valida que <code>:id</code> coincida con tu cuenta). Todos los campos son opcionales en <b>form-data</b>: solo se actualizan los que envíes.</p>
+    <h5>Campos (todos opcionales)</h5>
+    <pre>name / email / document / password    (texto)
+file                                  (foto opcional, clave "file")</pre>
+    <h5>Respuesta 200</h5>
+    <pre>{ "…usuario actualizado" }</pre>
+    <p>Reemplaza <code>:id</code> en la URL con tu <code>_id</code> obtenido en <b>Mi perfil</b>.</p>` },
+  { id:'users-delete', name:'Eliminar mi cuenta', method:'DELETE', url:'{{baseUrl}}/api/users/',
+    docs:`<h4>DELETE /api/users</h4>
+    <p>Elimina la cuenta asociada al token (no requiere <code>:id</code> ni body).</p>
+    <h5>Respuesta 200</h5>
+    <pre>{ "message": "Usuario eliminado", "data": { …usuario } }</pre>
+    <p class="req">Acción irreversible. El token quedará inválido después.</p>` }
+]},
+{ id:'groups', name:'Grupos', items:[
+  { id:'groups-list', name:'Mis grupos', method:'GET', url:'{{baseUrl}}/api/groups',
+    docs:`<h4>GET /api/groups</h4>
+    <p>Lista los grupos en los que participas, con tu <code>role</code> en cada uno.</p>
+    <h5>Respuesta 200</h5>
+    <pre>{ "data": [ { "_id": "…", "name": "…", "role": "admin", "members": […] } ] }</pre>
+    <p>Guarda el <code>_id</code> de un grupo: lo necesitas para tableros, miembros y Socket.IO.</p>` },
+  { id:'groups-get', name:'Grupo por ID', method:'GET', url:'{{baseUrl}}/api/groups/:id',
+    docs:`<h4>GET /api/groups/:id</h4>
+    <p>Obtiene un grupo por <code>_id</code> (debes ser miembro). Reemplaza <code>:id</code> en la URL.</p>
+    <h5>Respuesta 200</h5>
+    <pre>{ "data": { "_id": "…", "name": "…", "members": [ { "userId": …, "role": "…" } ] } }</pre>` },
+  { id:'groups-create', name:'Crear grupo', method:'POST', url:'{{baseUrl}}/api/groups', bodyMode:'form',
+    form:[ {k:'name', v:''}, {k:'description', v:''}, {k:'file', type:'file', v:''} ],
+    docs:`<h4>POST /api/groups</h4>
+    <p>Crea un grupo en <b>form-data</b>. El usuario del token queda como <code>admin</code>.</p>
+    <h5>Campos</h5>
+    <pre>name         2-100 caracteres (requerido)
+description  opcional
+file         imagen opcional, clave "file" (PNG/JPG/JPEG/WEBP o audio)</pre>
+    <h5>Respuesta 201</h5>
+    <pre>{ "data": { "_id": "…", "name": "…", "members": [ … ] } }</pre>` },
+  { id:'groups-update', name:'Actualizar grupo', method:'PUT', url:'{{baseUrl}}/api/groups/:id', bodyMode:'form',
+    form:[ {k:'name', v:''}, {k:'description', v:''}, {k:'file', type:'file', v:''} ],
+    docs:`<h4>PUT /api/groups/:id</h4>
+    <p>Actualiza un grupo en <b>form-data</b> (todos los campos opcionales). Solo <code>admin</code> del grupo puede actualizarlo.</p>
+    <h5>Respuesta 200</h5>
+    <pre>{ "data": { …grupo }, "message": "Grupo actualizado exitosamente" }</pre>` },
+  { id:'groups-delete', name:'Eliminar grupo', method:'DELETE', url:'{{baseUrl}}/api/groups/:id',
+    docs:`<h4>DELETE /api/groups/:id</h4>
+    <p>Elimina el grupo (requiere rol <code>admin</code> en el grupo).</p>
+    <h5>Respuesta 200</h5>
+    <pre>{ "message": "Grupo eliminado exitosamente" }</pre>` },
+  { id:'groups-addmember', name:'Añadir miembro', method:'POST', url:'{{baseUrl}}/api/groups/:groupId/members', bodyMode:'json',
+    body:'{\n  "email": "colega@sprint.hub",\n  "role": "collaborator"\n}',
+    docs:`<h4>POST /api/groups/:groupId/members</h4>
+    <p>Agrega un usuario <b>por email</b> (debe estar registrado). Reemplaza <code>:groupId</code> en la URL.</p>
+    <h5>Cuerpo (JSON)</h5>
+    <pre>{ "email": "colega@sprint.hub", "role": "collaborator" }</pre>
+    <ul><li><code>role</code>: <code>admin</code> o <code>collaborator</code></li></ul>
+    <h5>Respuesta 200</h5>
+    <pre>{ "data": { …grupo con el nuevo miembro } }</pre>` },
+  { id:'groups-role', name:'Cambiar rol de miembro', method:'PUT', url:'{{baseUrl}}/api/groups/:id/members/:userId', bodyMode:'json',
+    body:'{\n  "role": "admin"\n}',
+    docs:`<h4>PUT /api/groups/:id/members/:userId</h4>
+    <p>Cambia el rol de un miembro existente. Reemplaza <code>:id</code> (grupo) y <code>:userId</code> (miembro) en la URL.</p>
+    <h5>Cuerpo (JSON)</h5>
+    <pre>{ "role": "admin" }</pre>
+    <h5>Respuesta 200</h5>
+    <pre>{ "data": { …grupo actualizado } }</pre>` },
+  { id:'groups-remove', name:'Quitar miembro', method:'DELETE', url:'{{baseUrl}}/api/groups/:id/members/:userId',
+    docs:`<h4>DELETE /api/groups/:id/members/:userId</h4>
+    <p>Quita a un miembro del grupo. Reemplaza <code>:id</code> y <code>:userId</code> en la URL.</p>
+    <h5>Respuesta 200</h5>
+    <pre>{ "data": { …grupo actualizado } }</pre>` }
+]},
+{ id:'boards', name:'Tableros (HTTP)', items:[
+  { id:'boards-bygroup', name:'Tableros del grupo', method:'GET', url:'{{baseUrl}}/api/boards/group/:groupId',
+    docs:`<h4>GET /api/boards/group/:groupId</h4>
+    <p>Lista los tableros de un grupo (debes ser miembro). La respuesta es un <b>array directo</b>, sin envoltorio.</p>
+    <h5>Respuesta 200</h5>
+    <pre>[ { "_id": "…", "title": "…", "description": "…", "groupId": "…" } ]</pre>
+    <p>Guarda el <code>_id</code> del tablero: lo usas en <code>board:join</code> para recibir los eventos en tiempo real.</p>` },
+  { id:'boards-create', name:'Crear tablero', method:'POST', url:'{{baseUrl}}/api/boards', bodyMode:'json',
+    body:'{\n  "title": "Tablero de pruebas",\n  "description": "Creado desde SprintHub Client",\n  "groupId": "<groupId>"\n}',
+    docs:`<h4>POST /api/boards</h4>
+    <p>Crea un tablero dentro de un grupo. El backend crea <b>columnas por defecto</b> automáticamente.</p>
+    <h5>Cuerpo (JSON)</h5>
+    <pre>{ "title": "Sprint 1", "description": "opcional", "groupId": "…requerido…" }</pre>
+    <ul><li><code>title</code>: 2-150 caracteres</li><li><code>groupId</code>: MongoId válido de un grupo tuyo</li></ul>
+    <h5>Respuesta 201</h5>
+    <pre>{ "message": "Tablero creado correctamente", "data": { "_id": "…", "title": "…" } }</pre>
+    <p>Con el <code>_id</code> del tablero: <b>Socket.IO → board:join</b> para trabajar en tiempo real.</p>` },
+  { id:'boards-update', name:'Actualizar tablero', method:'PUT', url:'{{baseUrl}}/api/boards/:id', bodyMode:'json',
+    body:'{\n  "title": "Nuevo título",\n  "description": "Nueva descripción"\n}',
+    docs:`<h4>PUT /api/boards/:id</h4>
+    <p>Actualiza título y/o descripción de un tablero. Ambos opcionales.</p>
+    <h5>Cuerpo (JSON)</h5>
+    <pre>{ "title": "…", "description": "…" }</pre>
+    <h5>Respuesta 200</h5>
+    <pre>{ "message": "Tablero actualizado correctamente", "data": { … } }</pre>` },
+  { id:'boards-delete', name:'Eliminar tablero', method:'DELETE', url:'{{baseUrl}}/api/boards/:id',
+    docs:`<h4>DELETE /api/boards/:id</h4>
+    <p>Elimina el tablero y sus columnas/tarjetas (valida propiedad sobre el grupo).</p>
+    <h5>Respuesta 200</h5>
+    <pre>{ "message": "Tablero eliminado exitosamente" }</pre>` }
+]},
+{ id:'sockets', name:'Socket.IO · tiempo real', socket:true, items:[
+  { id:'sock-conn', name:'Conexión al socket', sockEvent:'', tab:'sdocs',
+    docs:`<h4>Conexión Socket.IO</h4>
+    <p>El backend monta Socket.IO en el mismo servidor que la API. Autentica cada conexión con el JWT via <code>handshake.auth.token</code>.</p>
+    <pre>// equivalente en JS
+const socket = io("http://localhost:3000", { auth: { token: jwt } });</pre>
+    <h5>Flujo recomendado</h5>
+    <ul>
+      <li><b>1.</b> Auth → Login (HTTP) para obtener el JWT</li>
+      <li><b>2.</b> Pulsa <b>Conectar</b> en la barra de arriba</li>
+      <li><b>3.</b> <code>board:join</code> con el <code>_id</code> del tablero</li>
+      <li><b>4.</b> Los broadcasts llegan a la <b>Consola</b> (pestaña Escuchar)</li>
+    </ul>
+    <h5>Errores comunes</h5>
+    <ul>
+      <li><code>ValidationError: No se proporciono token</code> — conecta con el campo JWT vacío</li>
+      <li><code>ValidationError: Token invalido</code> — token expirado o inválido: haz login otra vez y reconecta</li>
+      <li><code>connect_error: xhr poll error / CORS</code> — revisa que la URL base sea correcta y el servidor activo</li>
+    </ul>` },
+  { id:'sock-join', name:'board:join — unirse a un tablero', sockEvent:'board:join',
+    payload:'"<boardId>"',
+    docs:`<h4>board:join</h4>
+    <p>Te une a la sala <code>board:&lt;boardId&gt;</code>. A partir de aquí recibes todos los broadcasts del tablero. Valida que el tablero pertenezca a un grupo tuyo.</p>
+    <h5>Payload</h5>
+    <pre>"&lt;boardId&gt;"     // el ID del tablero como string JSON</pre>
+    <h5>Ack</h5>
+    <pre>{ "ok": true, "board": { …tablero completo con columnas y tarjetas } }</pre>
+    <pre>{ "ok": false, "error": "…" }   // si no existe o no tienes acceso</pre>
+    <p class="ok2">Consejo: el ack de <code>board:join</code> devuelve el tablero completo — sirve como estado inicial del tablero en un frontend.</p>` },
+  { id:'sock-leave', name:'board:leave — salir del tablero', sockEvent:'board:leave',
+    payload:'"<boardId>"',
+    docs:`<h4>board:leave</h4>
+    <p>Te saca de la sala <code>board:&lt;boardId&gt;</code>: dejas de recibir sus broadcasts.</p>
+    <h5>Payload</h5>
+    <pre>"&lt;boardId&gt;"</pre>
+    <p>El backend <b>no envía ack</b> en este evento: el timeout de la consola es normal.</p>` },
+  { id:'sock-col-create', name:'column:create — crear columna', sockEvent:'column:create',
+    payload:'{\n  "name": "Nueva columna",\n  "boardId": "<boardId>"\n}',
+    docs:`<h4>column:create</h4>
+    <p>Crea una columna en el tablero (valida que seas miembro del grupo).</p>
+    <h5>Payload</h5>
+    <pre>{ "name": "En revisión", "boardId": "&lt;MongoId&gt;" }</pre>
+    <ul><li><code>name</code>: 2-150 caracteres</li></ul>
+    <h5>Ack</h5><pre>{ "ok": true, "column": { … } }</pre>
+    <h5>Broadcast</h5>
+    <pre>column:created → toda la sala board:&lt;id&gt; (te incluye a ti, io.to)</pre>` },
+  { id:'sock-col-update', name:'column:update — renombrar columna', sockEvent:'column:update',
+    payload:'{\n  "columnId": "<columnId>",\n  "name": "Nombre editado"\n}',
+    docs:`<h4>column:update</h4>
+    <p>Renombra una columna.</p>
+    <h5>Payload</h5>
+    <pre>{ "columnId": "&lt;MongoId&gt;", "name": "…" }</pre>
+    <h5>Ack</h5><pre>{ "ok": true, "column": { … } }</pre>
+    <h5>Broadcast</h5>
+    <pre>column:updated → sala board:&lt;id&gt; EXCEPTO tú (socket.to)</pre>
+    <p class="req">Importante para el frontend: cuando tú actualizas, usa el <b>ack</b> para reflejar el cambio localmente; el broadcast no te llega.</p>` },
+  { id:'sock-col-delete', name:'column:delete — eliminar columna', sockEvent:'column:delete',
+    payload:'"<columnId>"',
+    docs:`<h4>column:delete</h4>
+    <p>Elimina una columna. El payload es el <b>ID plano</b> (string), no un objeto.</p>
+    <h5>Payload</h5>
+    <pre>"&lt;columnId&gt;"</pre>
+    <h5>Ack</h5><pre>{ "ok": true }</pre>
+    <h5>Broadcast</h5>
+    <pre>column:deleted → toda la sala (te incluye) · payload: { "columnId": "…" }</pre>` },
+  { id:'sock-card-create', name:'card:create — crear tarjeta', sockEvent:'card:create',
+    payload:'{\n  "title": "Nueva tarea",\n  "description": "",\n  "columnId": "<columnId>",\n  "assignedTo": "<userId opcional>",\n  "priority": "media"\n}',
+    docs:`<h4>card:create</h4>
+    <p>Crea una tarjeta dentro de una columna.</p>
+    <h5>Payload</h5>
+    <pre>{
+  "title": "…",            // 2+ caracteres, requerido
+  "description": "…",      // opcional
+  "columnId": "…",         // requerido (MongoId)
+  "assignedTo": "…",       // opcional (userId)
+  "priority": "media"      // alta | media | baja (default: media)
+}</pre>
+    <h5>Ack</h5><pre>{ "ok": true, "card": { … } }</pre>
+    <h5>Broadcast</h5>
+    <pre>card:created → toda la sala (te incluye, io.to)</pre>` },
+  { id:'sock-card-update', name:'card:update — editar / mover tarjeta', sockEvent:'card:update',
+    payload:'{\n  "cardId": "<cardId>",\n  "title": "Tarea editada",\n  "description": "detalle",\n  "columnId": "<columnId destino>",\n  "assignedTo": "<userId opcional>",\n  "priority": "alta"\n}',
+    docs:`<h4>card:update</h4>
+    <p>Edita o <b>mueve</b> una tarjeta. Mover = mismo evento con <code>columnId</code> de destino (drag &amp; drop de un kanban).</p>
+    <h5>Payload</h5>
+    <pre>{
+  "cardId": "…",           // requerido
+  "columnId": "…",         // REQUERIDO también en updates (destino)
+  "title": "…", "description": "…", "assignedTo": "…", "priority": "…"
+}</pre>
+    <h5>Ack</h5><pre>{ "ok": true, "card": { … } }</pre>
+    <h5>Broadcast</h5>
+    <pre>card:updated → sala EXCEPTO tú (socket.to)</pre>
+    <p class="req">En el frontend: usa el ack para actualizar tu propia UI; usa el broadcast para actualizar la UI de los otros clientes.</p>` },
+  { id:'sock-card-delete', name:'card:delete — eliminar tarjeta', sockEvent:'card:delete',
+    payload:'"<cardId>"',
+    docs:`<h4>card:delete</h4>
+    <p>Elimina una tarjeta. Payload = <b>ID plano</b> (string).</p>
+    <h5>Payload</h5>
+    <pre>"&lt;cardId&gt;"</pre>
+    <h5>Ack</h5><pre>{ "ok": true }</pre>
+    <h5>Broadcast</h5>
+    <pre>card:deleted → toda la sala (te incluye) · payload: "&lt;cardId&gt;"</pre>` },
+  { id:'sock-listen', name:'Eventos del servidor (broadcasts)', sockEvent:'', tab:'listen', listenOnly:true,
+    docs:`<h4>Catálogo de broadcasts</h4>
+    <p>El servidor emite estos eventos a la sala <code>board:&lt;boardId&gt;</code>. Gestionan la sincronización del tablero en tiempo real.</p>
+    <h5>Incluyen al emisor (io.to)</h5>
+    <ul>
+      <li><code>column:created</code> · <code>column:deleted</code> {columnId}</li>
+      <li><code>card:created</code> · <code>card:deleted</code> (cardId)</li>
+    </ul>
+    <h5>Excluyen al emisor (socket.to)</h5>
+    <ul>
+      <li><code>column:updated</code> · <code>card:updated</code></li>
+    </ul>
+    <p>Patrón recomendado en el frontend: <b>ack = tu propia verdad</b>, <b>broadcast = sincroniza a los demás</b>. Con esa combinación, unirse (<code>board:join</code>), crear, mover y eliminar queda siempre consistente.</p>` }
+]}
+];
+
+const SERVER_EVENTS = [
+  { ev:'column:created', desc:'Columna creada. La recibe TODA la sala board:<id>, incluyéndote (io.to).' },
+  { ev:'column:updated', desc:'Columna renombrada. Excluye al emisor (socket.to): usa tu ack.' },
+  { ev:'column:deleted', desc:'Columna eliminada · payload { columnId }. Incluye al emisor (io.to).' },
+  { ev:'card:created',    desc:'Tarjeta creada. La recibe toda la sala, incluyéndote (io.to).' },
+  { ev:'card:updated',    desc:'Tarjeta editada/movida. Excluye al emisor (socket.to): usa tu ack.' },
+  { ev:'card:deleted',    desc:'Tarjeta eliminada · payload = cardId (string). Incluye al emisor (io.to).' }
+];
+
+function findItem(id){
+  for (const c of COLLECTIONS){ const it = c.items.find(i => i.id === id); if (it) return it; }
+  return null;
+}
+/* ================= Sidebar / navegación ================= */
+function findCol(id){ return COLLECTIONS.find(c => c.items.some(i => i.id === id)); }
+
+function renderSidebar(filter){
+  const q = (filter || '').toLowerCase();
+  const root = $('#collectionsEl');
+  root.innerHTML = '';
+  let found = 0;
+  COLLECTIONS.forEach(col => {
+    const items = col.items.filter(it => !q ||
+      (it.name + ' ' + (it.url || '') + ' ' + (it.sockEvent || '')).toLowerCase().includes(q));
+    if(!items.length) return;
+    found += items.length;
+    const det = document.createElement('details');
+    det.className = 'folder';
+    det.open = !q;
+    det.innerHTML = '<summary><span class="caret">▶</span>' + esc(col.name) +
+      '<span class="cnt">' + items.length + '</span></summary>';
+    items.forEach(it => {
+      const row = document.createElement('div');
+      row.className = 'req-item' + (it.id === currentId ? ' active' : '');
+      row.dataset.id = it.id;
+      row.title = it.url || it.sockEvent || '';
+      const chip = col.socket ? '<span class="chip m-WS">WS</span>'
+                              : '<span class="chip m-' + it.method + '">' + it.method + '</span>';
+      row.innerHTML = chip + '<span class="nm">' + esc(it.name) + '</span>';
+      row.addEventListener('click', () => openItem(it.id));
+      det.appendChild(row);
+    });
+    root.appendChild(det);
+  });
+  if(!found) root.innerHTML = '<div class="empty">Sin coincidencias para “' + esc(filter || '') + '”</div>';
+}
+
+function showMode(mode){
+  currentMode = mode;
+  $('#httpMode').hidden = mode !== 'http';
+  $('#socketMode').hidden = mode !== 'socket';
+  $$('.req-item').forEach(r => r.classList.toggle('active', r.dataset.id === currentId));
+}
+
+function openItem(id){
+  const it = findItem(id);
+  if(!it) return;
+  currentId = id;
+  const isSocket = !!findCol(id).socket;
+  showMode(isSocket ? 'socket' : 'http');
+  if(isSocket) openSocketItem(it); else openHttpItem(it);
+}
+
+/* ================= Filas clave-valor ================= */
+function kvRow(cfg){
+  const row = document.createElement('div');
+  row.className = 'kv-row';
+  row.innerHTML =
+    '<input type="checkbox" class="kv-check" title="Incluir en la petición"' + (cfg.checked !== false ? ' checked' : '') + '>' +
+    '<input class="kv-k" placeholder="clave" spellcheck="false">' +
+    '<div class="vv"></div>' +
+    (cfg.withType
+      ? '<select class="kv-type"><option value="text">texto</option><option value="file">archivo</option></select>'
+      : '<span class="cell-empty"></span>') +
+    '<button class="kv-x" title="Quitar campo">×</button>';
+  $('.kv-k', row).value = cfg.k || '';
+  setValueCell(row, cfg.withType ? (cfg.type || 'text') : 'text', cfg.v || '');
+  if(cfg.withType) $('.kv-type', row).value = cfg.type || 'text';
+  $('.kv-x', row).addEventListener('click', () => { row.remove(); updateBadges(); });
+  if(cfg.withType) $('.kv-type', row).addEventListener('change', e => setValueCell(row, e.target.value, ''));
+  return row;
+}
+
+function setValueCell(row, type, val){
+  const cell = $('.vv', row);
+  if(type === 'file'){
+    cell.dataset.type = 'file';
+    cell.innerHTML = '<div class="filewrap"><button class="pick" type="button">Elegir archivo…</button><span class="fname">—</span></div>';
+    const btn = $('.pick', cell), name = $('.fname', cell);
+    const fi = document.createElement('input');
+    fi.type = 'file'; fi.style.display = 'none';
+    btn.addEventListener('click', () => fi.click());
+    fi.addEventListener('change', () => { name.textContent = (fi.files && fi.files[0]) ? fi.files[0].name : '—'; });
+    cell.appendChild(fi);
+    if(val) name.textContent = val;
+  } else {
+    cell.dataset.type = 'text';
+    cell.innerHTML = '<input class="kv-v" placeholder="valor" spellcheck="false">';
+    $('.kv-v', cell).value = val;
+  }
+}
+
+function collectKv(container){
+  const out = [];
+  $$('.kv-row', container).forEach(row => {
+    const checked = $('.kv-check', row).checked;
+    const k = $('.kv-k', row).value.trim();
+    if(!k) return;
+    const cell = $('.vv', row);
+    const type = cell.dataset.type || 'text';
+    let v = '', file = null;
+    if(type === 'file'){
+      const fi = $('input[type=file]', cell);
+      file = (fi && fi.files && fi.files[0]) ? fi.files[0] : null;
+      v = $('.fname', cell).textContent || '';
+    } else {
+      v = $('.kv-v', cell).value;
+    }
+    out.push({ checked, k, v, type, file });
+  });
+  return out;
+}
+
+function setRows(container, list, withType){
+  container.innerHTML = '';
+  (list || []).forEach(r => container.appendChild(kvRow({
+    k: r.k, v: r.v, type: r.type, withType: withType, checked: r.checked !== false
+  })));
+  updateBadges();
+}
+
+/* ================= Pestañas ================= */
+function setTab(name){
+  const scope = currentMode === 'socket' ? $('#socketMode') : $('#httpMode');
+  $$('.tab', scope).forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  $$('.tpanel', scope).forEach(p => p.classList.toggle('active', p.id === 'tp-' + name));
+}
+
+/* ================= Abrir peticiones ================= */
+function updateMethodClass(){
+  const sel = $('#methodSel');
+  sel.className = 'method-sel ms-' + sel.value;
+}
+
+function resetResponse(){
+  const pill = $('#respStatus');
+  pill.className = 'stat-pill stat-none';
+  pill.textContent = '—';
+  $('#respMeta').textContent = 'esperando una petición…';
+  $('#respBody').textContent = '// Ejecuta la petición para ver la respuesta aquí';
+  $('#respHeadersPre').textContent = '';
+}
+
+function openHttpItem(it){
+  updateMethodClass();
+  $('#methodSel').value = it.method || 'GET';
+  updateMethodClass();
+  $('#urlInput').value = it.url || '';
+  setRows($('#paramsRows'), []);
+  setRows($('#headersRows'), []);
+  const mode = it.bodyMode || 'none';
+  $('#bodyModeSel').value = mode;
+  applyBodyMode();
+  $('#jsonArea').value = it.body || '';
+  setRows($('#formRows'), it.form || [], true);
+  $('#docsBox').innerHTML = it.docs || '<p>Selecciona una petición de la colección.</p>';
+  setTab(mode === 'none' ? 'params' : 'body');
+  resetResponse();
+  updateAutoHeaders();
+}
+
+function openSocketItem(it){
+  $('#sdocsBox').innerHTML = it.docs || '';
+  $('#ackBox').style.display = 'none';
+  if(it.tab === 'listen'){ setTab('listen'); }
+  else if(it.sockEvent){
+    setTab('emit');
+    $('#emitEvent').value = it.sockEvent;
+    $('#emitPayload').value = it.payload || '';
+  } else {
+    setTab(it.tab || 'sdocs');
+  }
+}
+
+/* ================= URL <-> params ================= */
+function paramsToUrl(){
+  const base = $('#urlInput').value.split('?')[0];
+  const qs = collectKv($('#paramsRows'))
+    .filter(p => p.checked)
+    .map(p => encodeURIComponent(p.k) + '=' + encodeURIComponent(p.v))
+    .join('&');
+  $('#urlInput').value = qs ? base + '?' + qs : base;
+}
+
+function urlToParams(){
+  const raw = $('#urlInput').value;
+  const parts = raw.split('?');
+  const list = [];
+  if(parts[1]){
+    parts[1].split('&').forEach(pair => {
+      if(!pair) return;
+      const kv = pair.split('=');
+      list.push({ k: decodeURIComponent(kv[0] || ''), v: decodeURIComponent(kv[1] || ''), checked: true });
+    });
+  }
+  setRows($('#paramsRows'), list);
+}
+
+/* ================= Badges / auto headers ================= */
+function updateBadges(){
+  const n = collectKv($('#paramsRows')).filter(p => p.checked).length;
+  $('#paramsBdg').textContent = n;
+  $('#paramsBdg').classList.toggle('on', n > 0);
+  const mode = $('#bodyModeSel').value;
+  $('#bodyBdg').textContent = mode;
+  $('#bodyBdg').classList.toggle('on', mode !== 'none');
+}
+
+function updateAutoHeaders(){
+  const lines = [];
+  if(authOn && token) lines.push('<code>Authorization: Bearer ' + esc(token.slice(0, 22)) + '…</code>');
+  const mode = $('#bodyModeSel').value;
+  if(mode === 'json') lines.push('<code>Content-Type: application/json</code>');
+  if(mode === 'form') lines.push('Content-Type: multipart/form-data — lo genera el navegador con su boundary');
+  $('#autoHeadersList').innerHTML = lines.length ? lines.join('<br>') : '— (nada todavía: el token se activa en la pestaña Auth)';
+}
+
+function applyBodyMode(){
+  const mode = $('#bodyModeSel').value;
+  $('#bodyJsonWrap').hidden = mode !== 'json';
+  $('#bodyFormWrap').hidden = mode !== 'form';
+  updateBadges();
+  updateAutoHeaders();
+}
+
+/* ================= Token ================= */
+function setToken(t, msg){
+  token = t;
+  store.set('sh2_token', t);
+  $('#tokenArea').value = t;
+  $('#sockToken').value = t;
+  updateAutoHeaders();
+  if(msg) toast(msg, 'ok', 'Auth');
+}
+
+/* ================= Envío HTTP ================= */
+async function sendRequest(){
+  const method = $('#methodSel').value;
+  let url = resolveUrl($('#urlInput').value);
+  if(!url){ toast('Escribe la URL de la petición', 'err', 'Petición'); return; }
+  const pending = url.match(/\/:([a-zA-Z0-9_]+)/);
+  if(pending){
+    toast('Reemplaza el parámetro :' + pending[1] + ' de la URL con un _id real', 'warn', 'Parámetro sin completar');
+    setTab('docs');
+    return;
+  }
+  paramsToUrl();
+  url = resolveUrl($('#urlInput').value);
+
+  const mode = $('#bodyModeSel').value;
+  const headers = {};
+  collectKv($('#headersRows')).forEach(h => { if(h.checked) headers[h.k] = h.v; });
+  let body;
+
+  if(mode === 'json'){
+    const raw = $('#jsonArea').value.trim();
+    if(raw){
+      try{ JSON.parse(raw); }
+      catch(e){ toast('JSON del body inválido: ' + e.message, 'err', 'Body'); setTab('body'); return; }
+      body = raw;
+      if(!headers['Content-Type']) headers['Content-Type'] = 'application/json';
+    }
+  } else if(mode === 'form'){
+    const fd = new FormData();
+    let any = false;
+    collectKv($('#formRows')).forEach(r => {
+      if(!r.checked) return;
+      if(r.type === 'file'){ if(r.file){ fd.append(r.k, r.file); any = true; } }
+      else if(r.v !== ''){ fd.append(r.k, r.v); any = true; }
+    });
+    body = fd;
+    if(!any) toast('form-data vacío: no se enviarán campos', 'warn', 'Body');
+  }
+
+  if(authOn && token) headers['Authorization'] = 'Bearer ' + token;
+
+  const btn = $('#sendBtn');
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+  const t0 = performance.now();
+  try{
+    const res = await fetch(url, { method, headers, body });
+    const dt = Math.round(performance.now() - t0);
+    const text = await res.text();
+    let json = null;
+    try{ json = JSON.parse(text); }catch(e){}
+    lastRespText = json ? pretty(json) : text;
+    if(json && typeof json.token === 'string' && json.token.length >= 10){
+      setToken(json.token, 'JWT capturado automáticamente de la respuesta');
+    }
+    renderResponse(res.status, res.statusText, dt, text, json, res.headers);
+    pushHistory({
+      method, url: $('#urlInput').value, status: res.status, ms: dt, mode,
+      params: collectKv($('#paramsRows')),
+      headers: collectKv($('#headersRows')),
+      json: mode === 'json' ? $('#jsonArea').value : '',
+      form: mode === 'form' ? collectKv($('#formRows')).map(r => ({ k:r.k, v:r.v, type:r.type, checked:r.checked })) : []
+    });
+  }catch(err){
+    renderFail(err.message, Math.round(performance.now() - t0));
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Enviar';
+  }
+}
+
+function renderResponse(status, statusText, dt, text, json, resHeaders){
+  const pill = $('#respStatus');
+  pill.className = 'stat-pill stat-' + String(status).charAt(0);
+  pill.textContent = status + (statusText ? ' ' + statusText : '');
+  $('#respMeta').textContent = dt + ' ms · ' + fmtBytes(text.length) + (json ? ' · JSON' : ' · texto');
+  $('#respBody').innerHTML = json ? highlightJson(json) : esc(text || '(respuesta vacía)');
+  let hs = '';
+  try{
+    resHeaders.forEach((v, k) => { hs += k + ': ' + v + '\n'; });
+  }catch(e){}
+  $('#respHeadersPre').textContent = hs || '—';
+  showRespTab('body');
+}
+
+function renderFail(msg, dt){
+  const pill = $('#respStatus');
+  pill.className = 'stat-pill stat-0';
+  pill.textContent = 'FALLO';
+  $('#respMeta').textContent = dt + ' ms · error de red';
+  $('#respBody').textContent =
+    '// Error de red: ' + msg + '\n' +
+    '// Checklist:\n' +
+    '//  - ¿Está corriendo el backend en ' + env.baseUrl + '?\n' +
+    '//  - ¿El puerto es correcto? (server.ts usa PORT, por defecto 3000)\n' +
+    '//  - Si sirves esta página desde otro origen, revisa el CORS del backend.';
+  showRespTab('body');
+}
+
+function showRespTab(name){
+  $$('.resp-tab').forEach(b => b.classList.toggle('active', b.dataset.rt === name));
+  $('#respBodyWrap').hidden = name !== 'body';
+  $('#respHeadersWrap').hidden = name !== 'headers';
+}
+
+/* ================= cURL ================= */
+function buildCurl(){
+  const method = $('#methodSel').value;
+  const url = resolveUrl($('#urlInput').value);
+  const mode = $('#bodyModeSel').value;
+  const parts = ["curl -X " + method + " '" + url + "'"];
+  if(authOn && token) parts.push("-H 'Authorization: Bearer " + token + "'");
+  if(mode === 'json' && $('#jsonArea').value.trim()){
+    parts.push("-H 'Content-Type: application/json'");
+    parts.push("-d '" + $('#jsonArea').value.trim().replace(/'/g, "'\\''") + "'");
+  } else if(mode === 'form'){
+    collectKv($('#formRows')).forEach(r => {
+      if(!r.checked) return;
+      parts.push(r.type === 'file' ? "-F '" + r.k + "=@/ruta/a/tu/archivo'" : "-F '" + r.k + "=" + r.v + "'");
+    });
+  }
+  return parts.join(' \\\n  ');
+}
+
+function copyText(txt, okMsg){
+  const done = () => toast(okMsg || 'Copiado al portapapeles', 'ok', 'Portapapeles');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done).catch(() => fallbackCopy(txt, done));
+  } else fallbackCopy(txt, done);
+}
+
+function fallbackCopy(txt, done){
+  const ta = document.createElement('textarea');
+  ta.value = txt;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try{ document.execCommand('copy'); done(); }
+  catch(e){ toast('No se pudo copiar automáticamente', 'err'); }
+  ta.remove();
+}
+
+/* ================= Historial ================= */
+function pushHistory(entry){
+  entry.t = Date.now();
+  history.unshift(entry);
+  history = history.slice(0, 30);
+  store.set('sh2_history', history);
+  renderHistory();
+}
+
+function renderHistory(){
+  const c = $('#historyListEl');
+  c.innerHTML = '';
+  if(!history.length){ c.innerHTML = '<div class="empty">Aún no hay peticiones.<br>Cada envío queda registrado aquí.</div>'; return; }
+  history.forEach(h => {
+    const row = document.createElement('div');
+    row.className = 'hist-item';
+    const cls = h.status >= 500 ? 'st-5' : h.status >= 400 ? 'st-4' : h.status >= 300 ? 'st-3' : 'st-2';
+    const short = h.url.replace(/\{\{baseUrl\}\}/, '');
+    row.innerHTML = '<span class="chip m-' + esc(h.method) + '">' + esc(h.method) + '</span>' +
+      '<span class="nm" title="' + esc(h.url) + '">' + esc(short) + '</span>' +
+      '<span class="st ' + cls + '">' + h.status + '</span>' +
+      '<span class="tm">' + esc(h.ms + 'ms') + '</span>';
+    row.addEventListener('click', () => restoreHistory(h));
+    c.appendChild(row);
+  });
+}
+
+function restoreHistory(h){
+  currentId = null;
+  showMode('http');
+  $('#methodSel').value = h.method;
+  updateMethodClass();
+  $('#urlInput').value = h.url;
+  setRows($('#paramsRows'), h.params || []);
+  setRows($('#headersRows'), h.headers || []);
+  $('#bodyModeSel').value = h.mode || 'none';
+  applyBodyMode();
+  $('#jsonArea').value = h.json || '';
+  setRows($('#formRows'), h.form || [], true);
+  $('#docsBox').innerHTML =
+    '<h4>Petición restaurada del historial</h4>' +
+    '<p>Se recargó la configuración tal como se envió.</p>' +
+    '<p>URL: <code>' + esc(h.url) + '</code></p>' +
+    '<p>Resultado anterior: <b>' + h.status + '</b> en ' + h.ms + ' ms.</p>' +
+    '<p class="req">Los archivos elegidos no se restauran (los navegadores no recuerdan archivos): vuelve a elegir el archivo si la petición lo necesita.</p>';
+  setTab((h.mode || 'none') === 'none' ? 'params' : 'body');
+  resetResponse();
+  toast('Petición del historial cargada', 'ok', 'Historial');
+}
+/* ================= Socket.IO ================= */
+const DIRS = { out:['▲','ld-out'], in:['▼','ld-in'], ack:['✓','ld-ack'], info:['●','ld-info'], err:['✕','ld-err'] };
+
+function sockLog(dir, ev, data){
+  const logEl = $('#sockLog');
+  const empty = $('.log-empty', logEl);
+  if(empty) empty.remove();
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  const d = DIRS[dir] || DIRS.info;
+  let payload = '';
+  if(data !== undefined && data !== null){
+    payload = (typeof data === 'string') ? data : pretty(data);
+  }
+  line.innerHTML = '<span class="log-t">' + nowTime() + '</span>' +
+    '<span class="log-dir ' + d[1] + '">' + d[0] + '</span>' +
+    '<span class="log-ev">' + esc(ev) + '</span>' +
+    '<span class="log-d">' + esc(payload) + '</span>';
+  logEl.appendChild(line);
+  logTotal++;
+  $('#logCount').textContent = logTotal + (logTotal === 1 ? ' evento' : ' eventos');
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function setSockStatus(s){
+  const dot = $('#sockDot'), pill = $('#sockPill');
+  dot.className = 'sock-dot' + (s === 'on' ? ' on' : s === 'err' ? ' err' : s === 'connecting' ? ' wconn' : '');
+  pill.className = 'pill-top' + (s === 'on' ? ' on' : s === 'err' ? ' err' : s === 'connecting' ? ' wconn' : '');
+  $('#sockPillText').textContent = 'Socket: ' +
+    (s === 'on' ? 'conectado' : s === 'err' ? 'error de conexión' : s === 'connecting' ? 'conectando…' : 'desconectado');
+  $('#sockConnectBtn').disabled = (s === 'on' || s === 'connecting');
+  $('#sockDisconnectBtn').disabled = (s !== 'on');
+}
+
+function socketConnect(){
+  if(typeof io === 'undefined'){
+    toast('La librería Socket.IO (CDN) no está disponible. Comprueba tu conexión a internet y recarga la página.', 'err', 'Socket.IO');
+    return;
+  }
+  if(socket){ try{ socket.disconnect(); }catch(e){} socket = null; }
+  const url = resolveUrl($('#sockUrl').value);
+  const t = $('#sockToken').value.trim() || token;
+  if(!t) toast('Conectando sin JWT: el backend responderá ValidationError (el token es obligatorio).', 'warn', 'Socket.IO');
+  setSockStatus('connecting');
+  socket = io(url, { auth: { token: t } });
+  socket.on('connect', () => {
+    setSockStatus('on');
+    sockLog('info', 'conectado', 'socket.id ' + socket.id + ' · ' + url);
+    toast('Socket conectado', 'ok', 'Socket.IO');
+  });
+  socket.on('disconnect', reason => { setSockStatus('off'); sockLog('info', 'desconectado', reason); });
+  socket.on('connect_error', err => { setSockStatus('err'); sockLog('err', 'connect_error', err.message); });
+  socket.onAny((ev, ...args) => {
+    updateListenCounts(ev);
+    if(hiddenEvents.has(ev)) return;
+    sockLog('in', ev, (args && args.length === 1) ? args[0] : args);
+  });
+}
+
+function socketDisconnect(){
+  if(socket) socket.disconnect();
+}
+
+function emitSocket(){
+  if(!socket || !socket.connected){
+    toast('Conecta el socket primero (botón Conectar de la barra superior).', 'err', 'Emitir');
+    return;
+  }
+  const ev = $('#emitEvent').value.trim();
+  if(!ev){ toast('Escribe el nombre del evento, ej: board:join', 'err', 'Emitir'); return; }
+  const raw = $('#emitPayload').value.trim();
+  let payload, hasPayload = false;
+  if(raw){
+    try{ payload = JSON.parse(raw); hasPayload = true; }
+    catch(e){ toast('Payload inválido (' + e.message + '). Recuerda: los strings van con comillas dobles.', 'err', 'Emitir'); return; }
+  }
+  sockLog('out', ev, hasPayload ? payload : '(sin payload)');
+  $('#ackBox').style.display = 'none';
+  const cb = (ackErr, ack) => {
+    if(ackErr){
+      sockLog('err', ev + ' · ack', 'Sin ack en 10 s — normal en eventos sin callback (ej: board:leave).');
+      return;
+    }
+    sockLog('ack', ev + ' · ack', ack);
+    const box = $('#ackBox');
+    box.style.display = 'block';
+    box.textContent = '✓ Ack de ' + ev + ':\n' + pretty(ack);
+  };
+  if(hasPayload) socket.timeout(10000).emit(ev, payload, cb);
+  else socket.timeout(10000).emit(ev, cb);
+}
+
+/* ================= Escuchar (catálogo del servidor) ================= */
+function renderListenRows(){
+  const c = $('#listenRows');
+  c.innerHTML = '';
+  SERVER_EVENTS.forEach(s => c.appendChild(listenRow(s.ev, s.desc)));
+}
+
+function listenRow(ev, desc){
+  const row = document.createElement('div');
+  row.className = 'listen-row' + (hiddenEvents.has(ev) ? ' muted' : '');
+  row.dataset.ev = ev;
+  row.innerHTML = '<input type="checkbox" title="Mostrar en consola"' + (!hiddenEvents.has(ev) ? ' checked' : '') + '>' +
+    '<span class="ev">' + esc(ev) + '</span>' +
+    '<span class="de">' + esc(desc) + '</span>' +
+    '<span class="ct">' + (counts[ev] || 0) + '</span>';
+  $('input', row).addEventListener('change', e => {
+    if(e.target.checked) hiddenEvents.delete(ev); else hiddenEvents.add(ev);
+    row.classList.toggle('muted', !e.target.checked);
+  });
+  return row;
+}
+
+function updateListenCounts(ev){
+  counts[ev] = (counts[ev] || 0) + 1;
+  let row = $('#listenRows .listen-row[data-ev="' + ev + '"]');
+  if(!row && !SERVER_EVENTS.some(s => s.ev === ev)){
+    SERVER_EVENTS.push({ ev: ev, desc: 'Evento recibido y vigilado automáticamente.' });
+    $('#listenRows').appendChild(listenRow(ev, 'Evento recibido y vigilado automáticamente.'));
+    row = $('#listenRows .listen-row[data-ev="' + ev + '"]');
+  }
+  if(row) $('.ct', row).textContent = counts[ev];
+}
+
+function addCustomListen(){
+  const val = $('#customEventInput').value.trim();
+  if(!val){ toast('Escribe el nombre del evento a vigilar', 'warn', 'Escuchar'); return; }
+  if(SERVER_EVENTS.some(s => s.ev === val)){ toast('Ese evento ya está en la lista', 'info', 'Escuchar'); return; }
+  SERVER_EVENTS.push({ ev: val, desc: 'Evento personalizado vigilado.' });
+  $('#listenRows').appendChild(listenRow(val, 'Evento personalizado vigilado.'));
+  $('#customEventInput').value = '';
+  toast('Vigilando "' + val + '"', 'ok', 'Escuchar');
+}
+
+/* ================= Tema / Entorno ================= */
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme', theme);
+  $('#themeIcon').textContent = theme === 'dark' ? '☾' : '☀';
+  store.set('sh2_theme', theme);
+}
+
+function openEnvModal(){
+  $('#envUrlInput').value = env.baseUrl;
+  $('#envModalBack').classList.add('open');
+}
+function closeEnvModal(){ $('#envModalBack').classList.remove('open'); }
+function saveEnv(){
+  const v = $('#envUrlInput').value.trim().replace(/\/+$/, '');
+  if(!v){ toast('La URL base no puede quedar vacía', 'err', 'Entorno'); return; }
+  if(!/^https?:\/\//.test(v)){ toast('La URL debe empezar con http:// o https://', 'err', 'Entorno'); return; }
+  env.baseUrl = v;
+  store.set('sh2_env', env);
+  $('#envChipText').textContent = v;
+  $('#sockUrl').value = '{{baseUrl}}';
+  closeEnvModal();
+  toast('Entorno actualizado: ' + v, 'ok', 'Entorno');
+}
+
+/* ================= Bindings ================= */
+function bind(){
+  $('#sendBtn').addEventListener('click', sendRequest);
+  $('#curlBtn').addEventListener('click', () => copyText(buildCurl(), 'Comando cURL copiado'));
+  $('#respCopy').addEventListener('click', () => copyText(lastRespText || '', 'Respuesta copiada'));
+  $$('.resp-tab').forEach(b => b.addEventListener('click', () => showRespTab(b.dataset.rt)));
+  $$('#httpTabs .tab').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+  $$('#sockTabs .tab').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+  $('#methodSel').addEventListener('change', updateMethodClass);
+
+  $('#paramsAdd').addEventListener('click', () => { $('#paramsRows').appendChild(kvRow({})); updateBadges(); });
+  $('#headersAdd').addEventListener('click', () => $('#headersRows').appendChild(kvRow({})));
+  $('#formAdd').addEventListener('click', () => $('#formRows').appendChild(kvRow({ withType: true })));
+  $('#paramsRows').addEventListener('input', updateBadges);
+  $('#paramsRows').addEventListener('change', () => { updateBadges(); paramsToUrl(); });
+  $('#urlInput').addEventListener('change', urlToParams);
+
+  $('#bodyModeSel').addEventListener('change', applyBodyMode);
+  $('#beautifyBtn').addEventListener('click', () => {
+    const raw = $('#jsonArea').value.trim();
+    if(!raw){ toast('No hay JSON para formatear', 'warn', 'Body'); return; }
+    try{ $('#jsonArea').value = pretty(JSON.parse(raw)); }
+    catch(e){ toast('JSON inválido: ' + e.message, 'err', 'Body'); }
+  });
+  $('#clearBodyBtn').addEventListener('click', () => { $('#jsonArea').value = ''; });
+
+  $('#authToggle').addEventListener('change', e => {
+    authOn = e.target.checked;
+    store.set('sh2_authOn', authOn);
+    updateAutoHeaders();
+  });
+  $('#tokenArea').addEventListener('input', e => {
+    token = e.target.value.trim();
+    store.set('sh2_token', token);
+    $('#sockToken').value = token;
+    updateAutoHeaders();
+  });
+
+  $('#searchInput').addEventListener('input', e => renderSidebar(e.target.value));
+  $('#clearHistBtn').addEventListener('click', () => {
+    history = [];
+    store.set('sh2_history', history);
+    renderHistory();
+    toast('Historial borrado', 'ok', 'Historial');
+  });
+
+  $('#envChip').addEventListener('click', openEnvModal);
+  $('#envSave').addEventListener('click', saveEnv);
+  $('#envCancel').addEventListener('click', closeEnvModal);
+  $('#envModalBack').addEventListener('click', e => { if(e.target === $('#envModalBack')) closeEnvModal(); });
+
+  $('#themeBtn').addEventListener('click', () => { theme = theme === 'dark' ? 'light' : 'dark'; applyTheme(); });
+
+  $('#sockPill').addEventListener('click', () => openItem('sock-conn'));
+  $('#sockConnectBtn').addEventListener('click', socketConnect);
+  $('#sockDisconnectBtn').addEventListener('click', socketDisconnect);
+  $('#emitBtn').addEventListener('click', emitSocket);
+  $('#customAddBtn').addEventListener('click', addCustomListen);
+  $('#logClearBtn').addEventListener('click', () => {
+    $('#sockLog').innerHTML = '<div class="log-empty">Consola limpia.</div>';
+    logTotal = 0;
+    $('#logCount').textContent = '0 eventos';
+  });
+
+  document.addEventListener('keydown', e => {
+    if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){
+      e.preventDefault();
+      if(currentMode === 'http') sendRequest(); else emitSocket();
+    }
+  });
+}
+
+/* ================= Init ================= */
+function init(){
+  applyTheme();
+  $('#envChipText').textContent = env.baseUrl;
+  $('#sockToken').value = token;
+  $('#tokenArea').value = token;
+  $('#authToggle').checked = authOn;
+  renderListenRows();
+  renderSidebar('');
+  renderHistory();
+  bind();
+  openItem('login');
+  setSockStatus('off');
+  updateAutoHeaders();
+}
+init();
+
+</script>
+</body>
+</html>

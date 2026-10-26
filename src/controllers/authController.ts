@@ -7,7 +7,7 @@ export class AuthController {
         async register(req:Request, res: Response){
             try{
                 const file = req.file
-                ?{filename: req.file.originalname, buffer : req.file.buffer}
+                ?{fileName: req.file.originalname, buffer : req.file.buffer}
                 : undefined;
 
                 const data = await registerInputSchema.parseAsync({...req.body,...(file&& {profilePicture: file})});
