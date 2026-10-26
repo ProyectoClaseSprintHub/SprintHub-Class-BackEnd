@@ -1,0 +1,2118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SprintHub · Suite de Pruebas Automáticas — Backend v2</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+:root{
+  --bg:#0d0e12; --panel:#13161c; --panel-2:#171b23; --panel-3:#1d222c;
+  --border:#242a37; --border-soft:#1b202b;
+  --text:#edf0f5; --muted:#8b93a7; --muted-2:#5f6879;
+  --accent:#3b82f6; --accent-strong:#2563eb; --accent-soft:rgba(59,130,246,.14);
+  --ok:#22c55e; --ok-soft:rgba(34,197,94,.13);
+  --err:#ef4444; --err-soft:rgba(239,68,68,.13);
+  --warn:#f59e0b; --warn-soft:rgba(245,158,11,.13);
+  --skip:#64748b; --skip-soft:rgba(100,116,139,.14);
+  --mono:ui-monospace,'SF Mono','Cascadia Code',Consolas,'Liberation Mono',monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,'Helvetica Neue',Arial,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5}
+::selection{background:rgba(59,130,246,.35)}
+button{font-family:inherit}
+input,select{font-family:inherit;color:var(--text)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#2a3140;border-radius:6px;border:2px solid var(--bg)}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- Topbar ---------- */
+.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:16px;
+  padding:10px 18px;background:var(--panel);border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand-mark{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#2563eb,#3b82f6);
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;letter-spacing:.5px;flex:none}
+.brand-text strong{font-size:15px;display:block;line-height:1.2;white-space:nowrap}
+.brand-text strong span{color:var(--accent)}
+.brand-text small{color:var(--muted);font-size:11.5px;white-space:nowrap}
+.env-chip{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--border);
+  border-radius:20px;padding:5px 14px;font-family:var(--mono);font-size:12px;color:var(--muted);max-width:340px;overflow:hidden}
+.env-chip b{color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot-live{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none;box-shadow:0 0 0 3px rgba(34,197,94,.15)}
+.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.divider{width:1px;height:24px;background:var(--border);margin:0 4px}
+
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);background:var(--panel-2);
+  color:var(--text);padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;
+  transition:background .15s,border-color .15s,transform .05s;white-space:nowrap}
+.btn:hover{background:var(--panel-3);border-color:#313a4d}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn svg{width:14px;height:14px;flex:none}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-strong);border-color:var(--accent-strong)}
+.btn-danger{background:var(--err);border-color:var(--err);color:#fff}
+.btn-danger:hover{background:#dc2626;border-color:#dc2626}
+.btn-ghost{background:transparent}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:6px}
+.btn-menu{display:none}
+
+/* ---------- Layout ---------- */
+.layout{display:flex;min-height:calc(100vh - 57px)}
+.sidebar{width:292px;flex:none;background:var(--panel);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto}
+.side-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px}
+.side-head span:first-child{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.side-count{font-family:var(--mono);font-size:11px;background:var(--accent-soft);color:var(--accent);
+  border:1px solid rgba(59,130,246,.3);border-radius:10px;padding:1px 8px}
+.side-group{border-bottom:1px solid var(--border-soft)}
+.side-group-head{display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:default}
+.side-group-head .g-name{font-weight:700;font-size:12.5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side-group-head .g-stats{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.side-group-head .btn-run-group{opacity:0;transition:opacity .15s}
+.side-group:hover .btn-run-group{opacity:1}
+.side-item{display:flex;align-items:center;gap:8px;padding:4px 14px 4px 22px;cursor:pointer;
+  border-left:2px solid transparent;transition:background .12s}
+.side-item:hover{background:var(--panel-2)}
+.side-item.active{background:var(--accent-soft);border-left-color:var(--accent)}
+.side-item .s-name{flex:1;min-width:0;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side-item.active .s-name{color:var(--text)}
+.side-summary{margin-top:auto;padding:14px 16px;border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--panel)}
+.mini-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.mini-tile{background:var(--panel-2);border:1px solid var(--border-soft);border-radius:8px;padding:6px 4px;text-align:center}
+.mini-tile b{display:block;font-family:var(--mono);font-size:14px;line-height:1.2}
+.mini-tile span{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+
+/* ---------- Main ---------- */
+.main{flex:1;min-width:0;padding:18px 20px 60px;display:flex;flex-direction:column;gap:16px;max-width:1120px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px}
+.card-title{display:flex;align-items:center;gap:9px;padding:13px 16px;border-bottom:1px solid var(--border-soft);
+  font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.card-title svg{width:15px;height:15px;color:var(--accent)}
+
+.config-body{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.config-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:11.5px;font-weight:600;color:var(--muted)}
+.field .input,.field select{background:var(--panel-2);border:1px solid var(--border);border-radius:8px;
+  padding:8px 11px;font-size:13px;outline:none;transition:border-color .15s}
+.field .input:focus,.field select:focus{border-color:var(--accent)}
+.field .input{font-family:var(--mono);min-width:340px;flex:1}
+.hint-line{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.hint-line code{font-family:var(--mono);background:var(--panel-2);border:1px solid var(--border-soft);
+  border-radius:5px;padding:1px 7px;font-size:11px;color:#a8b3c9}
+.chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10.5px;font-weight:700;
+  border-radius:5px;padding:2px 7px;border:1px solid;letter-spacing:.02em}
+.chip-file{color:#7dd3fc;background:rgba(125,211,252,.1);border-color:rgba(125,211,252,.3)}
+.chip-neg{color:#a8b3c9;background:rgba(168,179,201,.08);border-color:rgba(168,179,201,.25)}
+.toggle{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none;padding-bottom:6px}
+.toggle input{display:none}
+.toggle .track{width:34px;height:19px;border-radius:12px;background:var(--panel-3);border:1px solid var(--border);position:relative;transition:background .15s}
+.toggle .track::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--muted);transition:transform .15s,background .15s}
+.toggle input:checked + .track{background:var(--accent-soft);border-color:var(--accent)}
+.toggle input:checked + .track::after{transform:translateX(15px);background:var(--accent)}
+.toggle span.lbl{font-size:12.5px;color:var(--text)}
+details.req{border:1px solid var(--border-soft);border-radius:9px;background:var(--panel-2)}
+details.req summary{cursor:pointer;padding:9px 13px;font-size:12.5px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px}
+details.req summary::before{content:'▸';transition:transform .15s;color:var(--accent)}
+details.req[open] summary::before{transform:rotate(90deg)}
+details.req ul{padding:2px 16px 12px 30px;display:flex;flex-direction:column;gap:6px}
+details.req li{font-size:12.5px;color:var(--muted)}
+details.req li code{font-family:var(--mono);font-size:11px;color:#a8b3c9;background:var(--panel-3);border-radius:4px;padding:0 5px}
+
+/* ---------- Summary ---------- */
+.summary-body{padding:16px}
+.verdict{display:flex;align-items:center;gap:12px;border-radius:10px;padding:12px 15px;margin-bottom:14px;font-size:13.5px;font-weight:600;border:1px solid}
+.verdict.idle{background:var(--panel-2);border-color:var(--border);color:var(--muted)}
+.verdict.ok{background:var(--ok-soft);border-color:rgba(34,197,94,.35);color:#86efac}
+.verdict.warn{background:var(--warn-soft);border-color:rgba(245,158,11,.35);color:#fcd34d}
+.verdict.err{background:var(--err-soft);border-color:rgba(239,68,68,.35);color:#fca5a5}
+.verdict .v-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex:none;background:rgba(0,0,0,.25)}
+.verdict .v-icon svg{width:17px;height:17px}
+.verdict small{display:block;font-weight:400;font-size:11.5px;opacity:.75}
+.stat-tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.stat{background:var(--panel-2);border:1px solid var(--border-soft);border-radius:10px;padding:11px 13px}
+.stat b{display:block;font-family:var(--mono);font-size:21px;line-height:1.15}
+.stat span{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.stat.pass b{color:var(--ok)} .stat.fail b{color:var(--err)} .stat.warn b{color:var(--warn)}
+.stat.skip b{color:var(--skip)} .stat.time b{color:var(--accent)}
+.progress{height:6px;background:var(--panel-3);border-radius:4px;margin-top:14px;overflow:hidden}
+.progress .fill{height:100%;width:0%;border-radius:4px;background:linear-gradient(90deg,#2563eb,#3b82f6);transition:width .3s}
+.progress.err .fill{background:linear-gradient(90deg,#dc2626,#ef4444)}
+
+/* ---------- Results ---------- */
+.group-block{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--panel)}
+.group-block-head{display:flex;align-items:center;gap:10px;padding:11px 15px;background:var(--panel-2);border-bottom:1px solid var(--border-soft)}
+.group-block-head .g-title{font-weight:700;font-size:13px}
+.group-block-head .g-desc{font-size:11.5px;color:var(--muted)}
+.group-block-head .g-counts{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.trow{border-bottom:1px solid var(--border-soft)}
+.trow:last-child{border-bottom:none}
+.trow-head{display:flex;align-items:center;gap:10px;padding:9px 15px;cursor:pointer;transition:background .12s}
+.trow-head:hover{background:var(--panel-2)}
+.trow.open .trow-head{background:var(--panel-2)}
+.trow-head .tname{font-size:13px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trow-head .tpath{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none;max-width:280px}
+.trow-head .spacer{flex:1}
+.trow-head .tms{font-family:var(--mono);font-size:11px;color:var(--muted);flex:none}
+.trow-head .chev{width:14px;height:14px;color:var(--muted);flex:none;transition:transform .15s}
+.trow.open .chev{transform:rotate(90deg)}
+.trow-body{display:none;padding:4px 15px 16px}
+.trow.open .trow-body{display:block}
+.panes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pane{background:var(--bg);border:1px solid var(--border-soft);border-radius:9px;overflow:hidden}
+.pane h4{display:flex;align-items:center;gap:7px;font-size:10.5px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);padding:8px 11px;border-bottom:1px solid var(--border-soft)}
+.pane h4 .pill{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:9px}
+.pane-body{padding:10px 11px;font-family:var(--mono);font-size:11.5px;line-height:1.65;overflow-x:auto;max-height:330px;overflow-y:auto}
+.pane-body pre{font-family:inherit;white-space:pre-wrap;word-break:break-word}
+.kv{display:flex;gap:8px}
+.kv .k{color:var(--muted);flex:none}
+.kv .v{color:#c9d3e4;word-break:break-all}
+.status-pill{font-family:var(--mono);font-weight:800;font-size:11px;padding:2px 9px;border-radius:9px;border:1px solid}
+.status-pill.s2{color:#4ade80;background:var(--ok-soft);border-color:rgba(34,197,94,.4)}
+.status-pill.s4{color:#fca5a5;background:var(--err-soft);border-color:rgba(239,68,68,.4)}
+.status-pill.s5{color:#fca5a5;background:var(--err-soft);border-color:rgba(239,68,68,.4)}
+.status-pill.s0{color:#f87171;background:var(--err-soft);border-color:rgba(239,68,68,.4)}
+.status-pill.sj{color:#fcd34d;background:var(--warn-soft);border-color:rgba(245,158,11,.4)}
+.notes{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.note{display:flex;gap:8px;align-items:flex-start;font-family:var(--sans);font-size:12px;padding:7px 10px;border-radius:7px;border:1px solid}
+.note svg{width:13px;height:13px;flex:none;margin-top:2px}
+.note.err{background:var(--err-soft);border-color:rgba(239,68,68,.3);color:#fca5a5}
+.note.warn{background:var(--warn-soft);border-color:rgba(245,158,11,.3);color:#fcd34d}
+.note.info{background:var(--accent-soft);border-color:rgba(59,130,246,.3);color:#93c5fd}
+.note.ok{background:var(--ok-soft);border-color:rgba(34,197,94,.3);color:#86efac}
+
+/* dots / chips */
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.dot.pending{background:var(--skip);opacity:.45}
+.dot.running{background:var(--accent);animation:pulse 1s infinite}
+.dot.pass{background:var(--ok);box-shadow:0 0 0 3px rgba(34,197,94,.15)}
+.dot.warn{background:var(--warn);box-shadow:0 0 0 3px rgba(245,158,11,.15)}
+.dot.fail{background:var(--err);box-shadow:0 0 0 3px rgba(239,68,68,.15)}
+.dot.skip{background:var(--skip);box-shadow:0 0 0 3px rgba(100,116,139,.12)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.mchip{font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.04em;border-radius:5px;padding:2px 7px;border:1px solid;flex:none;min-width:44px;text-align:center}
+.m-GET{color:#4ade80;background:rgba(74,222,128,.09);border-color:rgba(74,222,128,.32)}
+.m-POST{color:#fbbf24;background:rgba(251,191,36,.09);border-color:rgba(251,191,36,.32)}
+.m-PUT{color:#60a5fa;background:rgba(96,165,250,.09);border-color:rgba(96,165,250,.32)}
+.m-DELETE{color:#f87171;background:rgba(248,113,113,.09);border-color:rgba(248,113,113,.32)}
+.m-SOCKET{color:#c084fc;background:rgba(192,132,252,.09);border-color:rgba(192,132,252,.32)}
+
+/* json highlight */
+.j-key{color:#7dd3fc}.j-str{color:#86efac}.j-num{color:#fcd34d}.j-bool{color:#c084fc}.j-null{color:#94a3b8}
+
+/* ---------- Console ---------- */
+.console .console-head{display:flex;align-items:center;gap:8px;padding:10px 15px;border-bottom:1px solid var(--border-soft);
+  font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.console .console-head .btns{margin-left:auto;display:flex;gap:6px}
+.console-body{font-family:var(--mono);font-size:11.5px;line-height:1.7;padding:10px 14px;max-height:260px;overflow-y:auto}
+.log-line{display:flex;gap:9px;white-space:pre-wrap;word-break:break-word}
+.log-line .lt{color:var(--muted-2,#5f6879);flex:none}
+.log-line .lg{color:var(--muted);flex:none}
+.log-line .lnm{color:#c9d3e4}
+.log-line.pass .st{color:var(--ok);font-weight:700}
+.log-line.fail .st{color:var(--err);font-weight:700}
+.log-line.warn .st{color:var(--warn);font-weight:700}
+.log-line.skip .st{color:var(--skip);font-weight:700}
+.log-line.run .st{color:var(--accent);font-weight:700}
+
+/* empty state */
+.empty{padding:26px 16px;text-align:center;color:var(--muted);font-size:12.5px}
+.group-block.flash{animation:flashG 1.6s ease}
+@keyframes flashG{0%,55%{box-shadow:0 0 0 2px var(--accent)}100%{box-shadow:0 0 0 0 transparent}}
+
+@media (max-width:980px){
+  .btn-menu{display:inline-flex}
+  .sidebar{position:fixed;left:0;top:57px;z-index:40;transform:translateX(-100%);transition:transform .2s;box-shadow:8px 0 30px rgba(0,0,0,.4)}
+  .layout.side-open .sidebar{transform:translateX(0)}
+  .stat-tiles{grid-template-columns:repeat(2,1fr)}
+  .panes{grid-template-columns:1fr}
+  .field .input{min-width:0}
+  .env-chip{display:none}
+  .trow-head .tpath{display:none}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn btn-ghost btn-menu" id="btn-menu" title="Menú">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <div class="brand">
+    <div class="brand-mark">SH</div>
+    <div class="brand-text">
+      <strong>SprintHub <span>Test Suite</span></strong>
+      <small>Backend v2 · HTTP + Socket.IO</small>
+    </div>
+  </div>
+  <div class="env-chip" title="URL base actual">
+    <span class="dot-live"></span><b id="env-url">http://localhost:3000</b>
+  </div>
+  <div class="topbar-actions">
+    <button id="btn-run" class="btn btn-primary" title="Ejecuta las 47 pruebas en orden">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v14l11-7-11-7z"/></svg>
+      Ejecutar todo
+    </button>
+    <button id="btn-stop" class="btn btn-danger" hidden title="Detener la ejecución">
+      <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+      Detener
+    </button>
+    <button id="btn-reset" class="btn btn-ghost" title="Limpiar resultados">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+      Reiniciar
+    </button>
+    <div class="divider"></div>
+    <button id="btn-md" class="btn btn-ghost" title="Descargar reporte Markdown + copiar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+      Reporte MD
+    </button>
+    <button id="btn-json" class="btn btn-ghost" title="Descargar resultados en JSON">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
+      JSON
+    </button>
+  </div>
+</header>
+
+<div class="layout" id="layout">
+  <aside class="sidebar">
+    <div class="side-head">
+      <span>Colección de pruebas</span>
+      <span class="side-count" id="side-total">—</span>
+    </div>
+    <div id="side-groups"></div>
+    <div class="side-summary">
+      <div class="mini-tiles">
+        <div class="mini-tile"><b id="mini-pass" style="color:var(--ok)">0</b><span>OK</span></div>
+        <div class="mini-tile"><b id="mini-warn" style="color:var(--warn)">0</b><span>Avisos</span></div>
+        <div class="mini-tile"><b id="mini-fail" style="color:var(--err)">0</b><span>Fallos</span></div>
+        <div class="mini-tile"><b id="mini-skip" style="color:var(--skip)">0</b><span>Omit.</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <section class="card config">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Configuración de la ejecución
+      </div>
+      <div class="config-body">
+        <div class="config-row">
+          <div class="field" style="flex:1">
+            <label for="cfg-baseurl">URL base del servidor (sin /api)</label>
+            <input class="input" id="cfg-baseurl" placeholder="http://localhost:3000" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="cfg-timeout">Tiempo límite por prueba</label>
+            <select id="cfg-timeout">
+              <option value="5000">5 s</option>
+              <option value="8000" selected>8 s</option>
+              <option value="15000">15 s</option>
+              <option value="30000">30 s</option>
+            </select>
+          </div>
+          <label class="toggle" title="Elimina el tablero, grupo y usuarios creados por la suite al finalizar">
+            <input type="checkbox" id="cfg-cleanup" checked>
+            <span class="track"></span><span class="lbl">Limpieza de datos</span>
+          </label>
+        </div>
+        <div class="hint-line">
+          <span>Sockets:</span><code id="cfg-socket-preview">—</code>
+          <span style="opacity:.4">·</span>
+          <span>JWT vía</span><code>Authorization: Bearer</code><span>y</span><code>handshake.auth.token</code>
+          <span style="opacity:.4">·</span>
+          <span>Archivos:</span><code>campo "file" (multipart)</code>
+        </div>
+        <div class="hint-line" id="cfg-data">
+          <span>Datos de prueba únicos por ejecución:</span><code id="cfg-data-chips">se generan al ejecutar</code>
+        </div>
+        <details class="req">
+          <summary>Requisitos del servidor que se está evaluando</summary>
+          <ul>
+            <li>Servidor corriendo (<code>npm run dev</code>) y MongoDB conectado (<code>MONGODB_URI</code>).</li>
+            <li><code>JWT_SECRET</code> configurado: la suite usa el token del login en cada petición protegida y en el handshake del socket.</li>
+            <li>Cloudinary configurado (<code>CLOUDINARY_*</code>): las 4 pruebas con archivo suben una imagen PNG real de 256×256 generada en el navegador.</li>
+            <li>HTTP con CORS abierto (<code>cors()</code>) y sockets con <code>CORS_ORIGIN</code>: si el HTTP pasa pero los sockets fallan por CORS, sirve esta página desde un origen permitido o ajusta <code>CORS_ORIGIN</code>.</li>
+            <li>Superficie esperada: 18 rutas HTTP + 8 eventos de socket (board / column / card) según el backend v2.</li>
+          </ul>
+        </details>
+      </div>
+    </section>
+
+    <section class="card summary">
+      <div class="summary-body">
+        <div class="verdict idle" id="verdict">
+          <div class="v-icon" id="verdict-icon"></div>
+          <div id="verdict-text">Listo para ejecutar<small>Pulsa «Ejecutar todo» para verificar los 18 endpoints HTTP y los 8 eventos de Socket.IO.</small></div>
+        </div>
+        <div class="stat-tiles">
+          <div class="stat pass"><b id="sum-pass">0</b><span>Pasaron</span></div>
+          <div class="stat warn"><b id="sum-warn">0</b><span>Con aviso</span></div>
+          <div class="stat fail"><b id="sum-fail">0</b><span>Fallaron</span></div>
+          <div class="stat skip"><b id="sum-skip">0</b><span>Omitidas</span></div>
+          <div class="stat time"><b id="sum-time">—</b><span>Tiempo total</span></div>
+        </div>
+        <div class="progress" id="sum-progress"><div class="fill" id="sum-progress-fill"></div></div>
+      </div>
+    </section>
+
+    <div id="results" style="display:flex;flex-direction:column;gap:16px"></div>
+
+    <section class="card console">
+      <div class="console-head">
+        Consola
+        <div class="btns">
+          <button class="btn btn-ghost btn-sm" id="btn-copy-log">Copiar</button>
+          <button class="btn btn-ghost btn-sm" id="btn-clear-log">Limpiar</button>
+        </div>
+      </div>
+      <div class="console-body" id="console-body"><div class="log-line"><span class="lt">--:--:--</span><span class="lnm" style="color:var(--muted)">Consola lista. Ejecuta la suite para ver la traza en vivo.</span></div></div>
+    </section>
+  </main>
+</div>
+<script>
+'use strict';
+/* ============================================================
+   SprintHub Test Suite — Pruebas automáticas del Backend v2
+   18 rutas HTTP + 8 eventos Socket.IO + 6 broadcasts
+   Las 4 pruebas con archivo usan un PNG real generado (canvas)
+   ============================================================ */
+
+const GROUPS = [
+  { id: 'conn',    name: 'Conectividad',       desc: 'Health y guardia de autenticación' },
+  { id: 'auth',    name: 'Autenticación',      desc: 'Registro (con y sin archivo) y login' },
+  { id: 'users',   name: 'Usuarios',           desc: '/me, actualización con archivo y validaciones' },
+  { id: 'groups',  name: 'Grupos y miembros',  desc: 'CRUD con imagen, roles y miembros' },
+  { id: 'boards',  name: 'Tableros',           desc: 'CRUD de tableros por grupo' },
+  { id: 'sockets', name: 'Socket.IO',          desc: 'Auth por token, salas, columnas y tarjetas en vivo' },
+  { id: 'cleanup', name: 'Limpieza',           desc: 'Elimina los datos creados por la suite' },
+];
+
+const ICONS = {
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v14l11-7-11-7z"/></svg>',
+  stop: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+  cross: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>',
+  warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
+  info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',
+  dot: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg>',
+  file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>',
+  chev: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>',
+};
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function hlJson(obj) {
+  let json;
+  if (obj === undefined) json = 'undefined';
+  else { try { json = JSON.stringify(obj, null, 2); } catch (e) { json = String(obj); } }
+  const out = esc(json === undefined ? 'undefined' : json);
+  return out.replace(/("(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(?:\s*:)?|\b(?:true|false)\b|\bnull\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g, (m) => {
+    let cls = 'j-num';
+    if (m.startsWith('"')) cls = m.endsWith(':') ? 'j-key' : 'j-str';
+    else if (m === 'true' || m === 'false') cls = 'j-bool';
+    else if (m === 'null') cls = 'j-null';
+    return '<span class="' + cls + '">' + m + '</span>';
+  });
+}
+
+const msgOf = (r) => {
+  if (!r || !r.data) return '(sin cuerpo)';
+  if (typeof r.data === 'string') return r.data.slice(0, 160);
+  return (r.data.message ? String(r.data.message) : JSON.stringify(r.data).slice(0, 160));
+};
+
+/* ---------------- Estado ---------------- */
+const LS_KEY = 'sprintQA.v1';
+const state = {
+  baseUrl: 'http://localhost:3000',
+  timeoutMs: 8000,
+  cleanup: true,
+  running: false,
+  abort: false,
+  ctx: {},
+  results: {},
+  t0: 0,
+  tEnd: 0,
+};
+
+function loadConfig() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+    if (saved.baseUrl) state.baseUrl = saved.baseUrl;
+    if (saved.timeoutMs) state.timeoutMs = saved.timeoutMs;
+    if (typeof saved.cleanup === 'boolean') state.cleanup = saved.cleanup;
+  } catch (e) { /* config por defecto */ }
+}
+function saveConfig() {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({ baseUrl: state.baseUrl, timeoutMs: state.timeoutMs, cleanup: state.cleanup }));
+  } catch (e) { /* sin almacenamiento */ }
+}
+
+/* ---------------- Datos de prueba únicos ---------------- */
+function generateData() {
+  const s = Date.now().toString(36);
+  return {
+    stamp: s,
+    nameA: 'QA Principal', nameA2: 'QA Principal Editado',
+    nameB: 'QA Secundario',
+    emailA: 'qa.a.' + s + '@example.com',
+    emailB: 'qa.b.' + s + '@example.com',
+    documentA: 'DOCA' + s, documentB: 'DOCB' + s,
+    password: 'Qa123456',
+    groupName: 'Grupo QA ' + s, groupName2: 'Grupo QA ' + s + ' Editado',
+    boardTitle: 'Tablero QA ' + s, boardTitle2: 'Tablero QA ' + s + ' Editado',
+  };
+}
+
+/* ---------------- Archivo real (PNG 256x256 generado en canvas) ---------------- */
+async function makeTestImage(label, hue) {
+  const size = 256;
+  const c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  const g = c.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, size, size);
+  grad.addColorStop(0, 'hsl(' + hue + ', 65%, 16%)');
+  grad.addColorStop(1, 'hsl(' + hue + ', 85%, 46%)');
+  g.fillStyle = grad; g.fillRect(0, 0, size, size);
+  g.strokeStyle = 'rgba(255,255,255,.28)'; g.lineWidth = 8; g.strokeRect(10, 10, size - 20, size - 20);
+  g.fillStyle = '#ffffff'; g.font = 'bold 92px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('SH', size / 2, size / 2 - 16);
+  g.fillStyle = 'rgba(255,255,255,.9)'; g.font = '17px monospace';
+  g.fillText(label + ' ' + Date.now().toString(36), size / 2, size / 2 + 56);
+  const blob = await new Promise((resolve) => c.toBlob(resolve, 'image/png'));
+  const name = 'qa-' + label + '.png';
+  return new File([blob], name, { type: 'image/png' });
+}
+
+function summarizeForm(form) {
+  const out = {};
+  try {
+    for (const pair of form.entries()) {
+      const v = pair[1];
+      if (v instanceof File) out[pair[0]] = { archivo: v.name, tipo: v.type, tamano: (v.size / 1024).toFixed(1) + ' KB' };
+      else out[pair[0]] = v;
+    }
+  } catch (e) { out._error = String(e); }
+  return out;
+}
+
+/* ---------------- HTTP ---------------- */
+function summarizeHeaders(headers) {
+  const h = {};
+  for (const k of Object.keys(headers)) {
+    h[k] = k.toLowerCase() === 'authorization' ? 'Bearer eyJ...' : headers[k];
+  }
+  return h;
+}
+
+async function httpRequest(t, method, path, opts) {
+  opts = opts || {};
+  const url = state.baseUrl + path;
+  const headers = {};
+  if (opts.token) headers['Authorization'] = 'Bearer ' + opts.token;
+  let body = null;
+  const reqInfo = { metodo: method, url, headers: summarizeHeaders(headers) };
+  if (opts.json !== undefined) {
+    headers['Content-Type'] = 'application/json';
+    reqInfo.headers = summarizeHeaders(headers);
+    body = JSON.stringify(opts.json);
+    reqInfo.cuerpo = opts.json;
+  } else if (opts.form) {
+    body = opts.form;
+    reqInfo.cuerpo = summarizeForm(opts.form);
+  }
+  t.res.request = reqInfo;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), opts.timeout || state.timeoutMs);
+  const start = performance.now();
+  try {
+    const r = await fetch(url, { method, headers, body, signal: ctrl.signal });
+    const text = await r.text();
+    let data;
+    try { data = JSON.parse(text); } catch (e) { data = text; }
+    const resp = {
+      status: r.status,
+      statusText: r.statusText,
+      size: text.length,
+      ms: Math.round(performance.now() - start),
+      data,
+    };
+    t.res.response = resp;
+    return resp;
+  } catch (e) {
+    const isAbort = e && e.name === 'AbortError';
+    const message = isAbort
+      ? 'Tiempo de espera agotado (' + ((opts.timeout || state.timeoutMs) / 1000) + ' s) sin respuesta del servidor'
+      : 'Error de red: ' + (e && e.message ? e.message : e);
+    t.res.response = { status: 0, statusText: 'network', size: 0, ms: Math.round(performance.now() - start), data: { message } };
+    const err = new Error(message);
+    err.network = true;
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/* ---------------- Socket.IO ---------------- */
+function socketUrl() {
+  try { return new URL(state.baseUrl).origin; } catch (e) { return state.baseUrl; }
+}
+
+function connectSocket(token, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    let s;
+    try {
+      const opts = { reconnection: false, timeout: timeoutMs };
+      if (token) opts.auth = { token };
+      s = io(socketUrl(), opts);
+    } catch (e) { return reject(new Error('No se pudo crear el socket: ' + e.message)); }
+    const timer = setTimeout(() => { cleanup(); reject(new Error('Tiempo de espera agotado conectando el socket')); }, timeoutMs);
+    function cleanup() { clearTimeout(timer); s.off('connect', onC); s.off('connect_error', onE); }
+    function onC() { cleanup(); resolve(s); }
+    function onE(err) { cleanup(); s.close(); reject(new Error((err && err.message) || 'connect_error')); }
+    s.on('connect', onC);
+    s.on('connect_error', onE);
+  });
+}
+
+function probeSocket(opts, timeoutMs) {
+  return new Promise((resolve) => {
+    let s;
+    try { s = io(socketUrl(), Object.assign({ reconnection: false, timeout: timeoutMs }, opts)); }
+    catch (e) { return resolve({ connected: false, error: 'No se pudo crear el socket: ' + e.message }); }
+    let done = false;
+    const finish = (v) => { if (done) return; done = true; clearTimeout(timer); s.off('connect', onC); s.off('connect_error', onE); try { s.close(); } catch (e) {} resolve(v); };
+    const timer = setTimeout(() => finish({ connected: false, error: 'timeout' }), timeoutMs);
+    const onC = () => finish({ connected: true });
+    const onE = (err) => finish({ connected: false, error: (err && err.message) || 'connect_error' });
+    s.on('connect', onC);
+    s.on('connect_error', onE);
+  });
+}
+
+function emitAck(socket, event, payload, timeoutMs) {
+  return new Promise((resolve) => {
+    const ms = timeoutMs || state.timeoutMs;
+    const timer = setTimeout(() => resolve({ _timeout: true }), ms);
+    try {
+      socket.timeout(ms).emit(event, payload, (err, resp) => {
+        clearTimeout(timer);
+        if (err) resolve({ _timeout: true, _err: String(err && err.message || err) });
+        else resolve(resp);
+      });
+    } catch (e) {
+      clearTimeout(timer);
+      resolve({ _timeout: true, _err: 'socket desconectado: ' + e.message });
+    }
+  });
+}
+
+function waitEvent(socket, event, timeoutMs) {
+  return new Promise((resolve) => {
+    const h = (payload) => { clearTimeout(timer); socket.off(event, h); resolve(payload); };
+    const timer = setTimeout(() => { socket.off(event, h); resolve(undefined); }, timeoutMs || state.timeoutMs);
+    socket.on(event, h);
+  });
+}
+
+/* ---------------- Contexto de prueba ---------------- */
+function makeT() {
+  const res = {
+    state: 'running', ms: 0,
+    request: null, response: null,
+    errors: [], warnings: [], notes: [],
+  };
+  const t = {
+    res,
+    expect(cond, msg) { if (!cond) res.errors.push(msg); return !!cond; },
+    fail(msg) { res.errors.push(msg); },
+    warn(msg) { res.warnings.push(msg); },
+    note(msg) { res.notes.push(msg); },
+    http(method, path, opts) { return httpRequest(t, method, path, opts); },
+    connect(token) { return connectSocket(token, state.timeoutMs); },
+    probe(opts) { return probeSocket(opts, Math.min(state.timeoutMs, 6000)); },
+    ack(socket, event, payload) { return emitAck(socket, event, payload); },
+    waitBroadcast(socket, event) { return waitEvent(socket, event, state.timeoutMs); },
+  };
+  return t;
+}
+
+const okStatus = (r, codes) => codes.indexOf(r.status) >= 0;
+
+/* ============================================================
+   CATÁLOGO DE PRUEBAS (47)
+   ============================================================ */
+const CATALOG = [
+
+/* ---------- 1 · Conectividad ---------- */
+{
+  id: 'health', group: 'conn', name: 'Servidor disponible (GET /api/health)', kind: 'http',
+  method: 'GET', path: '/api/health', doc: 'El servidor responde y la API está viva.',
+  needs: [], critical: true,
+  async run(ctx, t) {
+    try {
+      const r = await t.http('GET', '/api/health');
+      if (t.expect(okStatus(r, [200]), 'Se esperaba 200, se recibió ' + r.status + ': ' + msgOf(r))) {
+        ctx.healthOk = true;
+        const alive = (r.data && (r.data.success === true || r.data.message)) || typeof r.data === 'string';
+        t.expect(!!alive, 'La respuesta de health no incluye success/message');
+      }
+    } catch (e) {
+      t.fail(e.message);
+      t.note('Verifica que el servidor esté corriendo en ' + state.baseUrl + ' y que MongoDB esté conectado. Si lo abres como archivo local, el backend debe permitir CORS (cors() lo permite).');
+    }
+  },
+},
+{
+  id: 'auth-guard', group: 'conn', name: 'Rutas protegidas sin token (401)', kind: 'http',
+  method: 'GET', path: '/api/users/me', negative: true,
+  doc: 'GET /api/users/me SIN Authorization debe ser rechazado con 401 (requireAuth).',
+  needs: ['healthOk'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('GET', '/api/users/me');
+      if (r.status === 200) {
+        t.fail('El endpoint entregó datos del usuario SIN token: requireAuth no está protegiendo la ruta.');
+      } else if (r.status === 401) {
+        t.note('Rechazado correctamente con 401: ' + msgOf(r));
+      } else if (r.status === 403) {
+        t.warn('Se esperaba 401 y llegó 403; rechaza el acceso, pero la referencia usa 401.');
+      } else {
+        t.fail('Se esperaba 401, se recibió ' + r.status + ': ' + msgOf(r));
+      }
+    } catch (e) { t.fail(e.message); }
+  },
+},
+
+/* ---------- 2 · Autenticación ---------- */
+{
+  id: 'register-a', group: 'auth', name: 'Registrar usuario principal (con foto)', kind: 'http',
+  method: 'POST', path: '/api/auth/register', file: true,
+  doc: 'multipart con name/email/document/password + imagen PNG real en el campo "file". Espera 201.',
+  needs: ['healthOk'],
+  async run(ctx, t) {
+    const file = await makeTestImage('avatar-1', 217);
+    const form = new FormData();
+    form.append('name', ctx.data.nameA);
+    form.append('email', ctx.data.emailA);
+    form.append('document', ctx.data.documentA);
+    form.append('password', ctx.data.password);
+    form.append('file', file, file.name);
+    try {
+      const r = await t.http('POST', '/api/auth/register', { form });
+      if (t.expect(okStatus(r, [200, 201]), 'Se esperaba 201, se recibió ' + r.status + ': ' + msgOf(r))) {
+        ctx.userARegistered = true;
+        t.note('Archivo enviado: ' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB, image/png). Si falla con 400/500 revisa las variables CLOUDINARY_* del backend.');
+      }
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'register-b', group: 'auth', name: 'Registrar usuario secundario (sin foto)', kind: 'http',
+  method: 'POST', path: '/api/auth/register',
+  doc: 'Registro válido sin archivo (profilePicture es opcional). Espera 201.',
+  needs: ['healthOk'],
+  async run(ctx, t) {
+    const form = new FormData();
+    form.append('name', ctx.data.nameB);
+    form.append('email', ctx.data.emailB);
+    form.append('document', ctx.data.documentB);
+    form.append('password', ctx.data.password);
+    try {
+      const r = await t.http('POST', '/api/auth/register', { form });
+      if (t.expect(okStatus(r, [200, 201]), 'Se esperaba 201, se recibió ' + r.status + ': ' + msgOf(r))) ctx.userBRegistered = true;
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'register-dup', group: 'auth', name: 'Email duplicado rechazado (409)', kind: 'http',
+  method: 'POST', path: '/api/auth/register', negative: true,
+  doc: 'Registro repetido con el email del usuario principal. La referencia responde 409.',
+  needs: ['userARegistered'],
+  async run(ctx, t) {
+    const form = new FormData();
+    form.append('name', ctx.data.nameA);
+    form.append('email', ctx.data.emailA);
+    form.append('document', ctx.data.documentA);
+    form.append('password', ctx.data.password);
+    try {
+      const r = await t.http('POST', '/api/auth/register', { form });
+      if (okStatus(r, [200, 201])) t.fail('El servidor registró de nuevo un email existente: falta la validación de duplicados (409).');
+      else if (r.status === 409) t.note('Rechazado con 409: ' + msgOf(r));
+      else if (r.status === 400) t.warn('Rechazado con 400 en lugar de 409: ' + msgOf(r));
+      else t.fail('Se esperaba 409, se recibió ' + r.status + ': ' + msgOf(r));
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'register-invalid', group: 'auth', name: 'Datos inválidos rechazados', kind: 'http',
+  method: 'POST', path: '/api/auth/register', negative: true,
+  doc: 'name de 1 carácter, email inválido, documento corto y contraseña corta. La referencia responde 500 (peculiaridad), lo importante es que NO registre.',
+  needs: ['healthOk'],
+  async run(ctx, t) {
+    const form = new FormData();
+    form.append('name', 'x');
+    form.append('email', 'no-es-un-email');
+    form.append('document', '123');
+    form.append('password', '123');
+    try {
+      const r = await t.http('POST', '/api/auth/register', { form });
+      if (okStatus(r, [200, 201])) t.fail('El servidor aceptó datos inválidos (zod no está validando el registro).');
+      else if (r.status === 500) t.note('Rechazado con 500 — coincide con la referencia (ZodError llega al catch sin statusCode).');
+      else t.note('Rechazado con ' + r.status + ': ' + msgOf(r));
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'login-a', group: 'auth', name: 'Login usuario principal (token + user)', kind: 'http',
+  method: 'POST', path: '/api/auth/login',
+  doc: 'Credenciales válidas. Espera 200 con { message, token, user }.',
+  needs: ['userARegistered'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('POST', '/api/auth/login', { json: { email: ctx.data.emailA, password: ctx.data.password } });
+      if (t.expect(r.status === 200, 'Se esperaba 200, se recibió ' + r.status + ': ' + msgOf(r))) {
+        const token = r.data && typeof r.data.token === 'string' ? r.data.token : null;
+        const user = r.data && r.data.user ? r.data.user : null;
+        t.expect(!!token && token.length > 10, 'La respuesta no incluye un token JWT válido.');
+        t.expect(!!user && !!(user.id || user._id), 'La respuesta no incluye el objeto user con su id.');
+        if (token) ctx.tokenA = token;
+        if (user) ctx.userAId = user.id || user._id;
+        if (user && !user.name) t.warn('El user del login no incluye name.');
+      }
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'login-b', group: 'auth', name: 'Login usuario secundario', kind: 'http',
+  method: 'POST', path: '/api/auth/login',
+  doc: 'Segundo usuario para probar miembros de grupo.',
+  needs: ['userBRegistered'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('POST', '/api/auth/login', { json: { email: ctx.data.emailB, password: ctx.data.password } });
+      if (t.expect(r.status === 200, 'Se esperaba 200, se recibió ' + r.status + ': ' + msgOf(r))) {
+        const token = r.data && typeof r.data.token === 'string' ? r.data.token : null;
+        const user = r.data && r.data.user ? r.data.user : null;
+        t.expect(!!token, 'La respuesta no incluye el token.');
+        if (token) ctx.tokenB = token;
+        if (user) ctx.userBId = user.id || user._id;
+      }
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'login-wrongpass', group: 'auth', name: 'Login con contraseña incorrecta rechazado', kind: 'http',
+  method: 'POST', path: '/api/auth/login', negative: true,
+  doc: 'NO debe devolver token. La referencia responde 500 (Error plano), cualquier estado sin token cuenta como rechazo.',
+  needs: ['userARegistered'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('POST', '/api/auth/login', { json: { email: ctx.data.emailA, password: 'Incorrecta999' } });
+      const hasToken = r.data && typeof r.data.token === 'string' && r.data.token.length > 0;
+      if (r.status === 200 && hasToken) {
+        t.fail('El login entregó un token con una contraseña incorrecta: bcrypt.compare no se está validando.');
+      } else {
+        t.note('Rechazado sin token (HTTP ' + r.status + '): ' + msgOf(r));
+        if (r.status === 500) t.warn('Responde 500 — la referencia también lo hace (sería más correcto 401).');
+      }
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'login-invalid', group: 'auth', name: 'Login con email inválido (400)', kind: 'http',
+  method: 'POST', path: '/api/auth/login', negative: true,
+  doc: 'Cuerpo inválido: safeParse responde 400 con errors.',
+  needs: ['healthOk'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('POST', '/api/auth/login', { json: { email: 'no-es-un-email', password: '' } });
+      if (okStatus(r, [200, 201])) t.fail('El servidor aceptó un cuerpo de login inválido.');
+      else if (r.status === 400) t.note('Rechazado con 400: ' + msgOf(r));
+      else t.warn('Se esperaba 400, se recibió ' + r.status + ': ' + msgOf(r));
+    } catch (e) { t.fail(e.message); }
+  },
+},
+
+/* ---------- 3 · Usuarios ---------- */
+{
+  id: 'users-me', group: 'users', name: 'Obtener mi usuario (GET /api/users/me)', kind: 'http',
+  method: 'GET', path: '/api/users/me',
+  doc: 'Perfil del token. Espera 200 con el usuario (id, name, email).',
+  needs: ['tokenA'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('GET', '/api/users/me', { token: ctx.tokenA });
+      if (t.expect(r.status === 200, 'Se esperaba 200, se recibió ' + r.status + ': ' + msgOf(r))) {
+        const u = r.data && (r.data.user || r.data.data || r.data) || {};
+        const id = u.id || u._id;
+        t.expect(!!id, 'La respuesta no incluye el id del usuario.');
+        if (id && ctx.userAId) t.expect(id === ctx.userAId, 'El id devuelto (' + id + ') no coincide con el usuario autenticado (' + ctx.userAId + ').');
+        t.expect(!!(u.name && u.email), 'Faltan campos básicos (name, email) en la respuesta.');
+      }
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'users-update', group: 'users', name: 'Actualizar usuario (con foto)', kind: 'http',
+  method: 'PUT', path: '/api/users/:id', file: true,
+  doc: 'multipart con name nuevo + PNG real en "file". Espera 200 con el usuario actualizado.',
+  needs: ['tokenA', 'userAId'],
+  async run(ctx, t) {
+    const file = await makeTestImage('avatar-2', 262);
+    const form = new FormData();
+    form.append('name', ctx.data.nameA2);
+    form.append('file', file, file.name);
+    try {
+      const r = await t.http('PUT', '/api/users/' + ctx.userAId, { token: ctx.tokenA, form });
+      if (t.expect(r.status === 200, 'Se esperaba 200, se recibió ' + r.status + ': ' + msgOf(r))) {
+        const u = r.data && (r.data.user || r.data.data || r.data) || {};
+        t.expect(u.name === ctx.data.nameA2, 'El name no se actualizó (recibido: "' + (u.name || '(vacío)') + '", esperado: "' + ctx.data.nameA2 + '").');
+        if (!u.profilePicture) t.warn('El usuario actualizado no incluye profilePicture (la imagen no se subió o no se devolvió).');
+        else t.note('Nueva imagen de perfil: ' + String(u.profilePicture).slice(0, 72));
+      }
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'users-me-verify', group: 'users', name: 'Verificar persistencia de la actualización', kind: 'http',
+  method: 'GET', path: '/api/users/me',
+  doc: 'GET /me debe reflejar el name editado y la foto subida.',
+  needs: ['tokenA'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('GET', '/api/users/me', { token: ctx.tokenA });
+      if (t.expect(r.status === 200, 'Se esperaba 200, se recibió ' + r.status + ': ' + msgOf(r))) {
+        const u = r.data && (r.data.user || r.data.data || r.data) || {};
+        t.expect(u.name === ctx.data.nameA2, 'La actualización no persistió: name sigue siendo "' + (u.name || '(vacío)') + '".');
+        if (!u.profilePicture) t.warn('profilePicture sigue vacío tras subir la imagen.');
+      }
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'users-update-invalid', group: 'users', name: 'Actualización inválida rechazada', kind: 'http',
+  method: 'PUT', path: '/api/users/:id', negative: true,
+  doc: 'name de 1 carácter. El controlador responde 400.',
+  needs: ['tokenA', 'userAId'],
+  async run(ctx, t) {
+    const form = new FormData();
+    form.append('name', 'x');
+    try {
+      const r = await t.http('PUT', '/api/users/' + ctx.userAId, { token: ctx.tokenA, form });
+      if (okStatus(r, [200, 201])) t.fail('El servidor aceptó un name inválido (zod min 2 no se aplica).');
+      else if (r.status === 400) t.note('Rechazado con 400: ' + msgOf(r));
+      else t.warn('Se esperaba 400, se recibió ' + r.status + ': ' + msgOf(r));
+    } catch (e) { t.fail(e.message); }
+  },
+},
+
+/* ---------- 4 · Grupos y miembros ---------- */
+{
+  id: 'groups-create', group: 'groups', name: 'Crear grupo (con imagen)', kind: 'http',
+  method: 'POST', path: '/api/groups', file: true,
+  doc: 'multipart con name + description + PNG real en "file". Espera 201 con { data: { id, ... } }.',
+  needs: ['tokenA'],
+  async run(ctx, t) {
+    const file = await makeTestImage('grupo-1', 145);
+    const form = new FormData();
+    form.append('name', ctx.data.groupName);
+    form.append('description', 'Grupo creado por la suite de pruebas automáticas.');
+    form.append('file', file, file.name);
+    try {
+      const r = await t.http('POST', '/api/groups', { token: ctx.tokenA, form });
+      if (t.expect(r.status === 201, 'Se esperaba 201, se recibió ' + r.status + ': ' + msgOf(r))) {
+        const g = (r.data && (r.data.data || r.data)) || {};
+        const id = g.id || g._id;
+        t.expect(!!id, 'La respuesta no incluye el id del grupo.');
+        if (id) ctx.groupId = id;
+        if (!g.profilePicture) t.warn('El grupo no incluye profilePicture (la imagen no se subió o no se devuelve).');
+      }
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'groups-list', group: 'groups', name: 'Listar mis grupos', kind: 'http',
+  method: 'GET', path: '/api/groups',
+  doc: 'Espera 200 con { data: [ ... ] } conteniendo el grupo creado.',
+  needs: ['tokenA', 'groupId'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('GET', '/api/groups', { token: ctx.tokenA });
+      if (t.expect(r.status === 200, 'Se esperaba 200, se recibió ' + r.status + ': ' + msgOf(r))) {
+        const list = Array.isArray(r.data) ? r.data : (r.data && r.data.data);
+        t.expect(Array.isArray(list), 'La respuesta no es un arreglo ni trae { data: [...] }.');
+        if (Array.isArray(list)) {
+          const found = list.some((g) => (g.id || g._id) === ctx.groupId);
+          t.expect(found, 'El grupo creado no aparece en la lista del usuario.');
+        }
+      }
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'groups-get', group: 'groups', name: 'Obtener grupo por id', kind: 'http',
+  method: 'GET', path: '/api/groups/:id',
+  doc: 'Espera 200 con { data: grupo } (incluye members con el creador admin).',
+  needs: ['tokenA', 'groupId'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('GET', '/api/groups/' + ctx.groupId, { token: ctx.tokenA });
+      if (t.expect(r.status === 200, 'Se esperaba 200, se recibió ' + r.status + ': ' + msgOf(r))) {
+        const g = (r.data && (r.data.data || r.data)) || {};
+        t.expect((g.id || g._id) === ctx.groupId, 'El id del grupo no coincide con el solicitado.');
+        const members = g.members || [];
+        if (members.length < 1) t.warn('El grupo no incluye members con el creador (admin).');
+        else {
+          const creator = members.find((m) => (m.id || m._id || (m.user && (m.user.id || m.user._id))) === ctx.userAId);
+          if (!creator) t.warn('El creador no aparece en members.');
+          else if (creator.role !== 'admin') t.warn('El creador no tiene rol admin: ' + String(creator.role));
+        }
+      }
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'groups-get-invalid', group: 'groups', name: 'Id inválido rechazado (400)', kind: 'http',
+  method: 'GET', path: '/api/groups/abc', negative: true,
+  doc: 'mongoIdSchema debe responder 400 "Datos invalidos" vía errorMiddleware.',
+  needs: ['tokenA'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('GET', '/api/groups/abc', { token: ctx.tokenA });
+      if (okStatus(r, [200, 201])) t.fail('El servidor aceptó un id que no es ObjectId válido.');
+      else if (r.status === 400) t.note('Rechazado con 400: ' + msgOf(r));
+      else t.warn('Se esperaba 400, se recibió ' + r.status + ': ' + msgOf(r));
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'groups-update', group: 'groups', name: 'Actualizar grupo (con imagen)', kind: 'http',
+  method: 'PUT', path: '/api/groups/:id', file: true,
+  doc: 'multipart con name nuevo + PNG real. Espera 200 con data + message.',
+  needs: ['tokenA', 'groupId'],
+  async run(ctx, t) {
+    const file = await makeTestImage('grupo-2', 172);
+    const form = new FormData();
+    form.append('name', ctx.data.groupName2);
+    form.append('file', file, file.name);
+    try {
+      const r = await t.http('PUT', '/api/groups/' + ctx.groupId, { token: ctx.tokenA, form });
+      if (t.expect(r.status === 200, 'Se esperaba 200, se recibió ' + r.status + ': ' + msgOf(r))) {
+        const g = (r.data && (r.data.data || r.data)) || {};
+        t.expect(g.name === ctx.data.groupName2, 'El name del grupo no se actualizó (recibido: "' + (g.name || '(vacío)') + '").');
+        if (!r.data || !r.data.message) t.warn('La respuesta no incluye el message de confirmación.');
+      }
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'members-add', group: 'groups', name: 'Agregar miembro por email', kind: 'http',
+  method: 'POST', path: '/api/groups/:groupId/members',
+  doc: '{ email, role: "collaborator" }. Espera 200 con el grupo actualizado.',
+  needs: ['tokenA', 'groupId', 'userBId'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('POST', '/api/groups/' + ctx.groupId + '/members', {
+        token: ctx.tokenA,
+        json: { email: ctx.data.emailB, role: 'collaborator' },
+      });
+      if (t.expect(r.status === 200 || r.status === 201, 'Se esperaba 200, se recibió ' + r.status + ': ' + msgOf(r))) {
+        const g = (r.data && (r.data.data || r.data)) || {};
+        const members = g.members || [];
+        const added = members.some((m) => (m.id || m._id || (m.user && (m.user.id || m.user._id))) === ctx.userBId);
+        t.expect(added, 'El usuario secundario no aparece en members tras agregarlo.');
+        if (added) t.note('Miembro agregado con rol collaborator.');
+      }
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'members-role', group: 'groups', name: 'Cambiar rol del miembro', kind: 'http',
+  method: 'PUT', path: '/api/groups/:id/members/:userId',
+  doc: '{ role: "admin" }. Espera 200 con el grupo.',
+  needs: ['tokenA', 'groupId', 'userBId'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('PUT', '/api/groups/' + ctx.groupId + '/members/' + ctx.userBId, {
+        token: ctx.tokenA,
+        json: { role: 'admin' },
+      });
+      if (t.expect(r.status === 200, 'Se esperaba 200, se recibió ' + r.status + ': ' + msgOf(r))) {
+        const g = (r.data && (r.data.data || r.data)) || {};
+        const m = (g.members || []).find((x) => (x.id || x._id || (x.user && (x.user.id || x.user._id))) === ctx.userBId);
+        t.expect(!!m, 'El miembro no aparece en la respuesta.');
+        if (m && m.role !== 'admin') t.warn('El rol no quedó como admin: ' + String(m.role));
+      }
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'members-remove', group: 'groups', name: 'Quitar miembro del grupo', kind: 'http',
+  method: 'DELETE', path: '/api/groups/:id/members/:userId',
+  doc: 'DELETE del miembro secundario. Espera 200 con el grupo sin el miembro.',
+  needs: ['tokenA', 'groupId', 'userBId'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('DELETE', '/api/groups/' + ctx.groupId + '/members/' + ctx.userBId, { token: ctx.tokenA });
+      if (t.expect(r.status === 200, 'Se esperaba 200, se recibió ' + r.status + ': ' + msgOf(r))) {
+        const g = (r.data && (r.data.data || r.data)) || {};
+        const still = (g.members || []).some((x) => (x.id || x._id || (x.user && (x.user.id || x.user._id))) === ctx.userBId);
+        t.expect(!still, 'El miembro sigue apareciendo tras eliminarlo.');
+      }
+    } catch (e) { t.fail(e.message); }
+  },
+},
+
+/* ---------- 5 · Tableros ---------- */
+{
+  id: 'boards-create', group: 'boards', name: 'Crear tablero (3 columnas por defecto)', kind: 'http',
+  method: 'POST', path: '/api/boards',
+  doc: '{ title, description, groupId }. Espera 201 con { message, data } y data.columns = [Por hacer, En proceso, Hecho].',
+  needs: ['tokenA', 'groupId'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('POST', '/api/boards', {
+        token: ctx.tokenA,
+        json: { title: ctx.data.boardTitle, description: 'Tablero creado por la suite.', groupId: ctx.groupId },
+      });
+      if (t.expect(r.status === 201, 'Se esperaba 201, se recibió ' + r.status + ': ' + msgOf(r))) {
+        const b = (r.data && (r.data.data || r.data)) || {};
+        const id = b.id || b._id;
+        t.expect(!!id, 'La respuesta no incluye el id del tablero.');
+        if (id) ctx.boardId = id;
+        const cols = b.columns;
+        if (Array.isArray(cols) && cols.length > 0) {
+          ctx.defaultColumnId = cols[0].id || cols[0]._id;
+          t.note('Tablero creado con ' + cols.length + ' columnas: ' + cols.map((c) => c.name).join(', '));
+          if (cols.length < 3) t.warn('Se esperaban 3 columnas por defecto, llegaron ' + cols.length + '.');
+        } else {
+          t.warn('La respuesta del tablero no incluye el arreglo columns.');
+        }
+      }
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'boards-by-group', group: 'boards', name: 'Listar tableros del grupo', kind: 'http',
+  method: 'GET', path: '/api/boards/group/:groupId',
+  doc: 'Espera 200 con un arreglo que contiene el tablero creado.',
+  needs: ['tokenA', 'groupId', 'boardId'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('GET', '/api/boards/group/' + ctx.groupId, { token: ctx.tokenA });
+      if (t.expect(r.status === 200, 'Se esperaba 200, se recibió ' + r.status + ': ' + msgOf(r))) {
+        const list = Array.isArray(r.data) ? r.data : (r.data && r.data.data);
+        t.expect(Array.isArray(list), 'La respuesta no es un arreglo directo (ni { data: [...] }).');
+        if (Array.isArray(list)) {
+          const found = list.some((b) => (b.id || b._id) === ctx.boardId);
+          t.expect(found, 'El tablero creado no aparece en los tableros del grupo.');
+        }
+      }
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'boards-update', group: 'boards', name: 'Actualizar tablero', kind: 'http',
+  method: 'PUT', path: '/api/boards/:id',
+  doc: '{ title }. Espera 200 con { message, data } y el título actualizado.',
+  needs: ['tokenA', 'boardId'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('PUT', '/api/boards/' + ctx.boardId, {
+        token: ctx.tokenA,
+        json: { title: ctx.data.boardTitle2 },
+      });
+      if (t.expect(r.status === 200, 'Se esperaba 200, se recibió ' + r.status + ': ' + msgOf(r))) {
+        const b = (r.data && (r.data.data || r.data)) || {};
+        t.expect(b.title === ctx.data.boardTitle2, 'El título del tablero no se actualizó (recibido: "' + (b.title || '(vacío)') + '").');
+      }
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'boards-create-invalid', group: 'boards', name: 'groupId inválido rechazado (400)', kind: 'http',
+  method: 'POST', path: '/api/boards', negative: true,
+  doc: 'groupId "abc" no pasa mongoIdSchema: se espera 400.',
+  needs: ['tokenA'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('POST', '/api/boards', {
+        token: ctx.tokenA,
+        json: { title: 'Tablero inválido', groupId: 'abc' },
+      });
+      if (okStatus(r, [200, 201])) t.fail('El servidor aceptó un groupId inválido.');
+      else if (r.status === 400) t.note('Rechazado con 400: ' + msgOf(r));
+      else t.warn('Se esperaba 400, se recibió ' + r.status + ': ' + msgOf(r));
+    } catch (e) { t.fail(e.message); }
+  },
+},
+
+/* ---------- 6 · Socket.IO ---------- */
+{
+  id: 'socket-no-token', group: 'sockets', name: 'Conexión SIN token rechazada', kind: 'socket',
+  event: 'connect (sin auth)', negative: true,
+  doc: 'io() sin handshake.auth.token debe producir connect_error (socketAuthMiddleware).',
+  needs: ['healthOk'],
+  async run(ctx, t) {
+    t.res.request = { kind: 'socket', connect: socketUrl(), auth: '(sin token)' };
+    const p = await t.probe({});
+    t.res.response = { conectado: p.connected, error: p.error };
+    if (p.connected) t.fail('El servidor ACEPTÓ una conexión de socket sin token: falta el socketAuthMiddleware.');
+    else t.note('Conexión rechazada: ' + (p.error || 'connect_error'));
+  },
+},
+{
+  id: 'socket-bad-token', group: 'sockets', name: 'Conexión con token inválido rechazada', kind: 'socket',
+  event: 'connect (token inválido)', negative: true,
+  doc: 'Token que no es un JWT válido debe producir connect_error.',
+  needs: ['healthOk'],
+  async run(ctx, t) {
+    t.res.request = { kind: 'socket', connect: socketUrl(), auth: 'Bearer token-falso-123' };
+    const p = await t.probe({ auth: { token: 'token-falso-123' } });
+    t.res.response = { conectado: p.connected, error: p.error };
+    if (p.connected) t.fail('El servidor ACEPTÓ un token inventado: jwt.verify no se está aplicando en el middleware de sockets.');
+    else t.note('Conexión rechazada: ' + (p.error || 'connect_error'));
+  },
+},
+{
+  id: 'socket-connect-a', group: 'sockets', name: 'Conectar socket A (token válido)', kind: 'socket',
+  event: 'connect', doc: 'Handshake con auth.token del usuario principal.',
+  needs: ['tokenA'],
+  async run(ctx, t) {
+    t.res.request = { kind: 'socket', connect: socketUrl(), auth: 'token del usuario QA principal (handshake.auth.token)' };
+    try {
+      const s = await t.connect(ctx.tokenA);
+      ctx.socketA = s;
+      t.res.response = { conectado: true, socketId: s.id, userIdAutenticado: true };
+      t.note('Socket A conectado (id ' + s.id.slice(0, 12) + '…).');
+    } catch (e) {
+      t.res.response = { conectado: false, error: e.message };
+      t.fail('No se pudo conectar con un token válido: ' + e.message);
+      if (ctx.healthOk) t.note('El HTTP funciona pero el socket no: revisa CORS_ORIGIN en el .env del backend (el socket usa corsOrigin, el HTTP usa cors() abierto).');
+    }
+  },
+},
+{
+  id: 'socket-connect-b', group: 'sockets', name: 'Conectar socket B (segundo cliente)', kind: 'socket',
+  event: 'connect', doc: 'Segunda conexión con el mismo token para verificar los broadcasts desde otro cliente.',
+  needs: ['tokenA'],
+  async run(ctx, t) {
+    t.res.request = { kind: 'socket', connect: socketUrl(), auth: 'token del usuario QA principal (segunda sesión)' };
+    try {
+      const s = await t.connect(ctx.tokenA);
+      ctx.socketB = s;
+      t.res.response = { conectado: true, socketId: s.id };
+      t.note('Socket B conectado: actuará como observador de broadcasts.');
+    } catch (e) {
+      t.res.response = { conectado: false, error: e.message };
+      t.fail('No se pudo conectar el segundo cliente: ' + e.message);
+    }
+  },
+},
+{
+  id: 'board-join-a', group: 'sockets', name: 'Unirse al tablero (A) — board:join', kind: 'socket',
+  event: 'board:join', doc: 'board:join(boardId) debe hacer ack { ok: true, board } y unir a la sala board:<id>.',
+  needs: ['socketA', 'boardId'],
+  async run(ctx, t) {
+    t.res.request = { kind: 'socket', evento: 'board:join', payload: ctx.boardId, via: 'socket A', connect: socketUrl() };
+    const ack = await t.ack(ctx.socketA, 'board:join', ctx.boardId);
+    t.res.response = { ack };
+    if (t.expect(ack && ack.ok === true, 'El ack no confirmó el join: ' + (ack && ack.error ? ack.error : 'no llegó ack (timeout).'))) {
+      const board = ack.board || {};
+      t.expect((board.id || board._id) === ctx.boardId, 'El tablero del ack no coincide con el solicitado.');
+      if (Array.isArray(board.columns)) {
+        if (board.columns.length >= 3) t.note('El tablero llegó con ' + board.columns.length + ' columnas.');
+        else t.warn('El tablero llegó con ' + board.columns.length + ' columnas (se esperaban 3 por defecto).');
+      } else t.warn('El ack no incluye el tablero con su arreglo de columnas.');
+    } else if (ack && ack.error && String(ack.error).indexOf('no existe') >= 0) {
+      t.note('Si ya ejecutaste la suite completa, el tablero fue eliminado en la limpieza: usa «Ejecutar todo» para volver a crearlo.');
+    }
+  },
+},
+{
+  id: 'board-join-b', group: 'sockets', name: 'Unirse al tablero (B)', kind: 'socket',
+  event: 'board:join', doc: 'El observador también entra a la sala para recibir los broadcasts.',
+  needs: ['socketB', 'boardId'],
+  async run(ctx, t) {
+    t.res.request = { kind: 'socket', evento: 'board:join', payload: ctx.boardId, via: 'socket B', connect: socketUrl() };
+    const ack = await t.ack(ctx.socketB, 'board:join', ctx.boardId);
+    t.res.response = { ack };
+    t.expect(ack && ack.ok === true, 'El ack no confirmó el join del observador: ' + (ack && ack.error ? ack.error : 'timeout.'));
+  },
+},
+{
+  id: 'board-join-invalid', group: 'sockets', name: 'board:join con id inválido (ack ok:false)', kind: 'socket',
+  event: 'board:join', negative: true,
+  doc: 'board:join("abc") debe responder ack { ok: false, error } sin romper la conexión.',
+  needs: ['socketA'],
+  async run(ctx, t) {
+    t.res.request = { kind: 'socket', evento: 'board:join', payload: 'id-invalido-123', via: 'socket A', connect: socketUrl() };
+    const ack = await t.ack(ctx.socketA, 'board:join', 'id-invalido-123');
+    t.res.response = { ack };
+    if (ack && ack._timeout) t.fail('No llegó ack para un id inválido: el handler debería responder { ok: false, error }.');
+    else t.expect(ack && ack.ok === false, 'Se esperaba ack.ok === false, llegó: ' + JSON.stringify(ack).slice(0, 120));
+    t.expect(ctx.socketA.connected, 'La conexión se cerró al recibir un id inválido: el handler debería responder con ack, no romper el socket.');
+  },
+},
+{
+  id: 'column-create', group: 'sockets', name: 'Crear columna + broadcast column:created', kind: 'socket',
+  event: 'column:create', doc: 'column:create({ name, boardId }) → ack { ok, column } y broadcast a la sala (io.to).',
+  needs: ['socketA', 'socketB', 'boardId'],
+  async run(ctx, t) {
+    const payload = { name: 'QA Columna ' + ctx.data.stamp, boardId: ctx.boardId };
+    t.res.request = { kind: 'socket', evento: 'column:create', payload: payload, via: 'socket A', connect: socketUrl() };
+    const pB = t.waitBroadcast(ctx.socketB, 'column:created');
+    const ack = await t.ack(ctx.socketA, 'column:create', payload);
+    const bB = await pB;
+    t.res.response = { ack: ack, broadcast_en_B: bB === undefined ? '(no recibido)' : bB };
+    if (t.expect(ack && ack.ok === true, 'ack incorrecto: ' + (ack && ack.error ? ack.error : 'timeout sin ack.'))) {
+      const col = (ack.column || {});
+      const colId = col.id || col._id;
+      t.expect(!!colId, 'El ack no devolvió la columna con su id.');
+      if (colId) ctx.testColumnId = colId;
+      t.expect(bB !== undefined, 'El cliente B NO recibió column:created: la sala board:' + ctx.boardId + ' no está difundiendo.');
+      if (bB !== undefined) t.note('Broadcast column:created recibido por el segundo cliente.');
+    }
+  },
+},
+{
+  id: 'column-create-invalid', group: 'sockets', name: 'column:create inválido (ack ok:false)', kind: 'socket',
+  event: 'column:create', negative: true,
+  doc: 'name de 1 carácter no pasa createColumnInputSchema: ack { ok: false }.',
+  needs: ['socketA'],
+  async run(ctx, t) {
+    const payload = { name: 'x', boardId: ctx.boardId || '000000000000000000000000' };
+    t.res.request = { kind: 'socket', evento: 'column:create', payload: payload, via: 'socket A', connect: socketUrl() };
+    const ack = await t.ack(ctx.socketA, 'column:create', payload);
+    t.res.response = { ack: ack };
+    if (ack && ack._timeout) t.fail('No llegó ack: el handler debería responder { ok: false } para datos inválidos.');
+    else t.expect(ack && ack.ok === false, 'Se esperaba ack.ok === false, llegó: ' + JSON.stringify(ack).slice(0, 120));
+  },
+},
+{
+  id: 'column-update', group: 'sockets', name: 'Renombrar columna + broadcast column:updated', kind: 'socket',
+  event: 'column:update', doc: 'column:update({ columnId, name }) → ack { ok, column }; broadcast con socket.to (excluye al emisor).',
+  needs: ['socketA', 'socketB', 'testColumnId'],
+  async run(ctx, t) {
+    const nuevo = 'QA Columna Editada ' + ctx.data.stamp;
+    const payload = { columnId: ctx.testColumnId, name: nuevo };
+    t.res.request = { kind: 'socket', evento: 'column:update', payload: payload, via: 'socket A', connect: socketUrl() };
+    const pB = t.waitBroadcast(ctx.socketB, 'column:updated');
+    const ack = await t.ack(ctx.socketA, 'column:update', payload);
+    const bB = await pB;
+    t.res.response = { ack: ack, broadcast_en_B: bB === undefined ? '(no recibido)' : bB };
+    if (t.expect(ack && ack.ok === true, 'ack incorrecto: ' + (ack && ack.error ? ack.error : 'timeout sin ack.'))) {
+      if (ack.column && ack.column.name !== nuevo) t.warn('El nombre en el ack no coincide con el enviado.');
+      t.expect(bB !== undefined, 'El cliente B NO recibió column:updated.');
+      if (bB !== undefined) t.note('Broadcast column:updated recibido por el segundo cliente.');
+    }
+  },
+},
+{
+  id: 'card-create', group: 'sockets', name: 'Crear tarjeta + broadcast card:created', kind: 'socket',
+  event: 'card:create', doc: 'card:create({ title, description, columnId, priority }) → ack { ok, card } y broadcast io.to.',
+  needs: ['socketA', 'socketB', 'testColumnId'],
+  async run(ctx, t) {
+    const payload = {
+      title: 'QA Tarjeta ' + ctx.data.stamp,
+      description: 'Tarjeta creada automáticamente por la suite de pruebas.',
+      columnId: ctx.testColumnId,
+      priority: 'alta',
+    };
+    t.res.request = { kind: 'socket', evento: 'card:create', payload: payload, via: 'socket A', connect: socketUrl() };
+    const pB = t.waitBroadcast(ctx.socketB, 'card:created');
+    const ack = await t.ack(ctx.socketA, 'card:create', payload);
+    const bB = await pB;
+    t.res.response = { ack: ack, broadcast_en_B: bB === undefined ? '(no recibido)' : bB };
+    if (t.expect(ack && ack.ok === true, 'ack incorrecto: ' + (ack && ack.error ? ack.error : 'timeout sin ack.'))) {
+      const card = ack.card || {};
+      const cardId = card.id || card._id;
+      t.expect(!!cardId, 'El ack no devolvió la tarjeta con su id.');
+      if (cardId) ctx.cardId = cardId;
+      if (card.priority && card.priority !== 'alta') t.warn('La prioridad llegó como "' + card.priority + '" (se envió "alta").');
+      t.expect(bB !== undefined, 'El cliente B NO recibió card:created.');
+      if (bB !== undefined) t.note('Broadcast card:created recibido por el segundo cliente.');
+    }
+  },
+},
+{
+  id: 'card-update', group: 'sockets', name: 'Editar tarjeta + broadcast card:updated', kind: 'socket',
+  event: 'card:update', doc: 'card:update({ cardId, title, columnId }) → ack { ok, card }; broadcast socket.to.',
+  needs: ['socketA', 'socketB', 'cardId', 'testColumnId'],
+  async run(ctx, t) {
+    const nuevo = 'QA Tarjeta Editada ' + ctx.data.stamp;
+    const payload = { cardId: ctx.cardId, title: nuevo, columnId: ctx.testColumnId };
+    t.res.request = { kind: 'socket', evento: 'card:update', payload: payload, via: 'socket A', connect: socketUrl() };
+    const pB = t.waitBroadcast(ctx.socketB, 'card:updated');
+    const ack = await t.ack(ctx.socketA, 'card:update', payload);
+    const bB = await pB;
+    t.res.response = { ack: ack, broadcast_en_B: bB === undefined ? '(no recibido)' : bB };
+    if (t.expect(ack && ack.ok === true, 'ack incorrecto: ' + (ack && ack.error ? ack.error : 'timeout sin ack.'))) {
+      if (ack.card && ack.card.title !== nuevo) t.warn('El título en el ack no coincide con el enviado.');
+      t.expect(bB !== undefined, 'El cliente B NO recibió card:updated.');
+      if (bB !== undefined) t.note('Broadcast card:updated recibido por el segundo cliente.');
+    }
+  },
+},
+{
+  id: 'card-move', group: 'sockets', name: 'Mover tarjeta a otra columna', kind: 'socket',
+  event: 'card:update (mover)', doc: 'card:update({ cardId, columnId: <otra columna> }) debe cambiar la columna de la tarjeta.',
+  needs: ['socketA', 'socketB', 'cardId', 'defaultColumnId'],
+  async run(ctx, t) {
+    const payload = { cardId: ctx.cardId, columnId: ctx.defaultColumnId };
+    t.res.request = { kind: 'socket', evento: 'card:update', payload: payload, via: 'socket A', connect: socketUrl() };
+    const pB = t.waitBroadcast(ctx.socketB, 'card:updated');
+    const ack = await t.ack(ctx.socketA, 'card:update', payload);
+    const bB = await pB;
+    t.res.response = { ack: ack, broadcast_en_B: bB === undefined ? '(no recibido)' : bB };
+    if (t.expect(ack && ack.ok === true, 'ack incorrecto: ' + (ack && ack.error ? ack.error : 'timeout sin ack.'))) {
+      const card = ack.card || {};
+      const colFinal = card.columnId || (card.column && (card.column.id || card.column._id));
+      t.expect(colFinal === ctx.defaultColumnId, 'La tarjeta no quedó en la columna destino (columnId: ' + String(colFinal) + ').');
+      t.expect(bB !== undefined, 'El cliente B NO recibió el card:updated del movimiento.');
+      if (colFinal === ctx.defaultColumnId && bB !== undefined) t.note('Tarjeta movida a la primera columna del tablero y sincronizada.');
+    }
+  },
+},
+{
+  id: 'card-delete', group: 'sockets', name: 'Eliminar tarjeta + broadcast card:deleted', kind: 'socket',
+  event: 'card:delete', doc: 'card:delete(cardId) — payload es el id como texto plano → ack { ok: true } y broadcast io.to.',
+  needs: ['socketA', 'socketB', 'cardId'],
+  async run(ctx, t) {
+    t.res.request = { kind: 'socket', evento: 'card:delete', payload: ctx.cardId, via: 'socket A', connect: socketUrl() };
+    const pB = t.waitBroadcast(ctx.socketB, 'card:deleted');
+    const ack = await t.ack(ctx.socketA, 'card:delete', ctx.cardId);
+    const bB = await pB;
+    t.res.response = { ack: ack, broadcast_en_B: bB === undefined ? '(no recibido)' : bB };
+    if (t.expect(ack && ack.ok === true, 'ack incorrecto: ' + (ack && ack.error ? ack.error : 'timeout sin ack (¿el payload debe ser el id como string?).'))) {
+      t.expect(bB !== undefined, 'El cliente B NO recibió card:deleted.');
+      if (bB !== undefined && bB !== ctx.cardId) t.warn('El broadcast llegó con otro formato: ' + JSON.stringify(bB).slice(0, 80) + ' (la referencia envía el id plano).');
+    }
+  },
+},
+{
+  id: 'column-delete', group: 'sockets', name: 'Eliminar columna + broadcast column:deleted', kind: 'socket',
+  event: 'column:delete', doc: 'column:delete(columnId) — id como texto plano → ack { ok: true } y broadcast { columnId }.',
+  needs: ['socketA', 'socketB', 'testColumnId'],
+  async run(ctx, t) {
+    t.res.request = { kind: 'socket', evento: 'column:delete', payload: ctx.testColumnId, via: 'socket A', connect: socketUrl() };
+    const pB = t.waitBroadcast(ctx.socketB, 'column:deleted');
+    const ack = await t.ack(ctx.socketA, 'column:delete', ctx.testColumnId);
+    const bB = await pB;
+    t.res.response = { ack: ack, broadcast_en_B: bB === undefined ? '(no recibido)' : bB };
+    if (t.expect(ack && ack.ok === true, 'ack incorrecto: ' + (ack && ack.error ? ack.error : 'timeout sin ack (¿el payload debe ser el id como string?).'))) {
+      t.expect(bB !== undefined, 'El cliente B NO recibió column:deleted.');
+      if (bB !== undefined && !(bB && bB.columnId === ctx.testColumnId)) {
+        t.warn('El broadcast llegó con otro formato: ' + JSON.stringify(bB).slice(0, 80) + ' (la referencia envía { columnId }).');
+      }
+    }
+  },
+},
+{
+  id: 'board-leave', group: 'sockets', name: 'Salir del tablero (board:leave)', kind: 'socket',
+  event: 'board:leave', doc: 'board:leave(boardId) no tiene ack según el diseño; emitir no debe romper la conexión.',
+  needs: ['socketA', 'boardId'],
+  async run(ctx, t) {
+    t.res.request = { kind: 'socket', evento: 'board:leave', payload: ctx.boardId, via: 'socket A', connect: socketUrl() };
+    try {
+      ctx.socketA.emit('board:leave', ctx.boardId);
+      t.res.response = { emitido: true, nota: 'Evento sin ack en el diseño del backend' };
+      await sleep(800);
+      if (ctx.socketA.connected) t.note('Evento emitido y la conexión sigue viva.');
+      else t.warn('La conexión se cerró tras board:leave.');
+    } catch (e) {
+      t.res.response = { emitido: false, error: e.message };
+      t.fail('Error al emitir board:leave: ' + e.message);
+    }
+  },
+},
+{
+  id: 'socket-disconnect', group: 'sockets', name: 'Desconexión limpia de ambos sockets', kind: 'socket',
+  event: 'disconnect', doc: 'close() en A y B dispara disconnect sin errores en el servidor.',
+  needs: ['socketA', 'socketB'],
+  async run(ctx, t) {
+    t.res.request = { kind: 'socket', evento: '(cierre)', via: 'sockets A y B', connect: socketUrl() };
+    const dA = new Promise((r) => ctx.socketA.once('disconnect', (reason) => r(reason)));
+    const dB = new Promise((r) => ctx.socketB.once('disconnect', (reason) => r(reason)));
+    try { ctx.socketA.close(); } catch (e) {}
+    try { ctx.socketB.close(); } catch (e) {}
+    const rA = await Promise.race([dA, sleep(3000).then(() => 'timeout')]);
+    const rB = await Promise.race([dB, sleep(3000).then(() => 'timeout')]);
+    t.res.response = { razon_A: rA, razon_B: rB };
+    t.expect(rA !== 'timeout', 'El socket A no reportó disconnect.');
+    t.expect(rB !== 'timeout', 'El socket B no reportó disconnect.');
+    delete ctx.socketA; delete ctx.socketB;
+  },
+},
+
+/* ---------- 7 · Limpieza ---------- */
+{
+  id: 'cleanup-board', group: 'cleanup', name: 'Eliminar el tablero de prueba', kind: 'http',
+  method: 'DELETE', path: '/api/boards/:id', cleanup: true,
+  doc: 'DELETE /api/boards/:boardId → 200 { message }.',
+  needs: ['tokenA', 'boardId'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('DELETE', '/api/boards/' + ctx.boardId, { token: ctx.tokenA });
+      t.expect(okStatus(r, [200, 204]), 'Se esperaba 200, se recibió ' + r.status + ': ' + msgOf(r));
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'cleanup-group', group: 'cleanup', name: 'Eliminar el grupo de prueba', kind: 'http',
+  method: 'DELETE', path: '/api/groups/:id', cleanup: true,
+  doc: 'DELETE /api/groups/:groupId → 200 { message }.',
+  needs: ['tokenA', 'groupId'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('DELETE', '/api/groups/' + ctx.groupId, { token: ctx.tokenA });
+      t.expect(okStatus(r, [200, 204]), 'Se esperaba 200, se recibió ' + r.status + ': ' + msgOf(r));
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'cleanup-user-b', group: 'cleanup', name: 'Eliminar el usuario secundario', kind: 'http',
+  method: 'DELETE', path: '/api/users', cleanup: true,
+  doc: 'DELETE /api/users con el token de B → 200 { message, data }.',
+  needs: ['tokenB'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('DELETE', '/api/users', { token: ctx.tokenB });
+      t.expect(okStatus(r, [200, 204]), 'Se esperaba 200, se recibió ' + r.status + ': ' + msgOf(r));
+    } catch (e) { t.fail(e.message); }
+  },
+},
+{
+  id: 'cleanup-user-a', group: 'cleanup', name: 'Eliminar el usuario principal', kind: 'http',
+  method: 'DELETE', path: '/api/users', cleanup: true,
+  doc: 'DELETE /api/users con el token de A → 200 { message, data }.',
+  needs: ['tokenA'],
+  async run(ctx, t) {
+    try {
+      const r = await t.http('DELETE', '/api/users', { token: ctx.tokenA });
+      t.expect(okStatus(r, [200, 204]), 'Se esperaba 200, se recibió ' + r.status + ': ' + msgOf(r));
+    } catch (e) { t.fail(e.message); }
+  },
+},
+];
+
+/* ============================================================
+   RUNNER
+   ============================================================ */
+function skipResult(reason) {
+  return { state: 'skip', ms: 0, request: null, response: null, errors: [], warnings: [], notes: [reason] };
+}
+
+function setRunningUI(running) {
+  $('btn-run').disabled = running;
+  $('btn-run').hidden = running;
+  $('btn-stop').hidden = !running;
+  $('btn-stop').disabled = false;
+  $('cfg-baseurl').disabled = running;
+  $('cfg-timeout').disabled = running;
+  $('cfg-cleanup').disabled = running;
+  if (!running) $('btn-stop').innerHTML = ICONS.stop + ' Detener';
+}
+
+async function runTests(focusGroup) {
+  if (state.running) return;
+  if (!/^https?:\/\/.+/.test(state.baseUrl)) {
+    alert('Configura una URL base válida (por ejemplo http://localhost:3000).');
+    return;
+  }
+  state.running = true;
+  state.abort = false;
+  setRunningUI(true);
+  state.ctx = { data: generateData() };
+  state.results = {};
+  renderDataChips();
+  state.t0 = performance.now();
+  state.tEnd = 0;
+  for (const tst of CATALOG) state.results[tst.id] = undefined;
+  renderAllRows();
+  updateSummary();
+  appendInfo('Ejecución iniciada · ' + CATALOG.length + ' pruebas · ' + state.baseUrl + (focusGroup ? ' (enfocando: ' + groupName(focusGroup) + ')' : ''));
+
+  for (const tst of CATALOG) {
+    let res;
+    if (state.abort) {
+      res = skipResult('Ejecución detenida por el usuario.');
+    } else {
+      const missing = tst.needs.filter((k) => !state.ctx[k]);
+      if (missing.length) {
+        res = skipResult('Omitida: falta ' + missing.join(', ') + ' (dependencia fallida o no ejecutada).');
+      } else if (tst.cleanup && !state.cleanup) {
+        res = skipResult('Limpieza desactivada en la configuración.');
+      } else if (!state.ctx.healthOk && tst.id !== 'health') {
+        res = skipResult('Servidor no disponible (falló GET /api/health): no se ejecutan el resto de pruebas.');
+      } else {
+        const t = makeT();
+        state.results[tst.id] = t.res;
+        updateTestRow(tst.id);
+        logTest(tst, t.res, true);
+        const start = performance.now();
+        try {
+          await tst.run(state.ctx, t);
+        } catch (e) {
+          t.fail(e.message);
+          if (e && e.network) t.note('Sin conexión con ' + state.baseUrl + ' — verifica que el servidor esté corriendo y permita CORS.');
+        }
+        t.res.ms = Math.round(performance.now() - start);
+        t.res.state = t.res.errors.length ? 'fail' : (t.res.warnings.length ? 'warn' : 'pass');
+        if (tst.cleanup && t.res.state === 'fail') {
+          t.res.warnings = t.res.warnings.concat(t.res.errors.map((e) => 'Limpieza (no bloquea el veredicto): ' + e));
+          t.res.errors = [];
+          t.res.state = 'warn';
+        }
+        res = t.res;
+      }
+    }
+    state.results[tst.id] = res;
+    updateTestRow(tst.id);
+    updateGroupHeader(tst.group);
+    updateSummary();
+    logTest(tst, res);
+    await sleep(30);
+  }
+
+  if (state.ctx.socketA) { try { state.ctx.socketA.close(); } catch (e) {} }
+  if (state.ctx.socketB) { try { state.ctx.socketB.close(); } catch (e) {} }
+  state.tEnd = performance.now();
+  state.running = false;
+  state.abort = false;
+  setRunningUI(false);
+  updateSummary();
+  if (focusGroup) {
+    const gb = $('gb-' + focusGroup);
+    if (gb) {
+      gb.classList.add('flash');
+      gb.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setTimeout(() => gb.classList.remove('flash'), 1600);
+    }
+  }
+  const c = countStates();
+  appendInfo('Ejecución finalizada: ' + c.pass + ' OK · ' + c.warn + ' avisos · ' + c.fail + ' fallos · ' + c.skip + ' omitidas en ' + fmtDur(state.tEnd - state.t0) + '.');
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+const groupName = (gid) => (GROUPS.find((g) => g.id === gid) || { name: gid }).name;
+const chipOf = (tst) => (tst.kind === 'socket' ? 'SOCKET' : tst.method);
+const displayPath = (tst) => (tst.kind === 'socket' ? tst.event : tst.method + ' ' + tst.path);
+const pre = (obj) => '<pre>' + hlJson(obj) + '</pre>';
+const kv = (k, v) => '<div class="kv"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>';
+const fmtSize = (b) => (b >= 1024 ? (b / 1024).toFixed(1) + ' KB' : (b || 0) + ' B');
+function fmtDur(ms) { return ms >= 1000 ? (ms / 1000).toFixed(1) + ' s' : Math.round(ms) + ' ms'; }
+
+function pillClass(status) {
+  if (status === 0) return 's0';
+  if (status < 300) return 's2';
+  if (status < 400) return 'sj';
+  if (status < 500) return 's4';
+  return 's5';
+}
+
+function renderSidebar() {
+  let html = '';
+  for (const g of GROUPS) {
+    const tests = CATALOG.filter((x) => x.group === g.id);
+    html += '<div class="side-group">'
+      + '<div class="side-group-head"><span class="g-name">' + esc(g.name) + '</span>'
+      + '<span class="g-stats" id="sg-stats-' + g.id + '">' + tests.length + '</span>'
+      + '<button class="btn btn-ghost btn-sm btn-run-group" data-rungroup="' + g.id + '" title="Ejecuta la suite completa con datos frescos y enfoca este grupo">' + ICONS.play + '</button>'
+      + '</div>';
+    for (const tst of tests) {
+      const chip = chipOf(tst);
+      html += '<div class="side-item" data-test="' + tst.id + '" id="side-' + tst.id + '">'
+        + '<span class="dot pending" id="sidedot-' + tst.id + '"></span>'
+        + '<span class="mchip m-' + chip + '">' + chip + '</span>'
+        + '<span class="s-name">' + esc(tst.name) + '</span></div>';
+    }
+    html += '</div>';
+  }
+  $('side-groups').innerHTML = html;
+  $('side-total').textContent = CATALOG.length;
+}
+
+function rowShell(tst) {
+  const chip = chipOf(tst);
+  const fileChip = tst.file
+    ? '<span class="chip chip-file"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21.4 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg> archivo real</span>'
+    : '';
+  const negChip = tst.negative ? '<span class="chip chip-neg">negativa</span>' : '';
+  return '<div class="trow" id="row-' + tst.id + '">'
+    + '<div class="trow-head" data-toggle="' + tst.id + '">'
+    + '<span class="dot pending" id="dot-' + tst.id + '"></span>'
+    + '<span class="mchip m-' + chip + '">' + chip + '</span>'
+    + '<span class="tname">' + esc(tst.name) + '</span>'
+    + fileChip + negChip
+    + '<span class="spacer"></span>'
+    + '<span class="tpath">' + esc(displayPath(tst)) + '</span>'
+    + '<span class="tms" id="ms-' + tst.id + '"></span>'
+    + ICONS.chev
+    + '</div>'
+    + '<div class="trow-body" id="body-' + tst.id + '"></div>'
+    + '</div>';
+}
+
+function renderResults() {
+  let html = '';
+  for (const g of GROUPS) {
+    const tests = CATALOG.filter((x) => x.group === g.id);
+    html += '<div class="group-block" id="gb-' + g.id + '">'
+      + '<div class="group-block-head">'
+      + '<span class="g-title">' + esc(g.name) + '</span>'
+      + '<span class="g-desc">' + esc(g.desc) + '</span>'
+      + '<span class="g-counts" id="gcounts-' + g.id + '">sin ejecutar</span>'
+      + '<button class="btn btn-ghost btn-sm" data-rungroup="' + g.id + '" title="Ejecuta la suite completa con datos frescos y enfoca este grupo">' + ICONS.play + ' Ejecutar grupo</button>'
+      + '</div>';
+    for (const tst of tests) html += rowShell(tst);
+    html += '</div>';
+  }
+  $('results').innerHTML = html;
+}
+
+function renderRequestPane(tst, res) {
+  let inner;
+  if (!res.request) {
+    inner = '<div class="empty">Sin solicitud registrada.</div>';
+  } else if (res.request.metodo) {
+    inner = kv('Método', res.request.metodo)
+      + kv('URL', res.request.url)
+      + (res.request.auth ? kv('Auth', res.request.auth) : '')
+      + '<div style="margin-top:8px">' + pre({ headers: res.request.headers, cuerpo: res.request.cuerpo }) + '</div>';
+  } else {
+    inner = kv('Conexión', res.request.connect || socketUrl())
+      + (res.request.auth ? kv('Auth', res.request.auth) : '')
+      + (res.request.via ? kv('Emisor', res.request.via) : '');
+    if (res.request.evento) inner += kv('Evento (emit)', res.request.evento);
+    if (res.request.payload !== undefined) inner += '<div style="margin-top:8px">' + pre(res.request.payload) + '</div>';
+  }
+  return '<div class="pane"><h4>Solicitud</h4><div class="pane-body">' + inner + '</div></div>';
+}
+
+function renderResponsePane(tst, res) {
+  let head = '';
+  let inner;
+  const r = res.response;
+  if (!r) {
+    inner = '<div class="empty">Sin respuesta.</div>';
+  } else if (typeof r.status === 'number') {
+    head = '<span class="status-pill ' + pillClass(r.status) + '">' + (r.status || '—') + ' ' + esc(r.statusText || '') + '</span>'
+      + '<span class="pill" style="color:var(--muted);border-color:var(--border)">' + (r.ms || 0) + ' ms · ' + fmtSize(r.size) + '</span>';
+    inner = pre(r.data);
+  } else {
+    inner = pre(r);
+  }
+  return '<div class="pane"><h4>Respuesta ' + head + '</h4><div class="pane-body">' + inner + '</div></div>';
+}
+
+function renderNotes(res) {
+  const items = [];
+  if (res.state === 'skip' && (!res.notes || !res.notes.length)) res.notes = ['Omitida.'];
+  for (const e of res.errors) items.push({ cls: 'err', icon: ICONS.cross, text: e });
+  for (const w of res.warnings) items.push({ cls: 'warn', icon: ICONS.warn, text: w });
+  for (const n of res.notes) items.push({ cls: res.state === 'skip' ? 'info' : 'info', icon: ICONS.info, text: n });
+  if (!items.length) items.push({ cls: 'ok', icon: ICONS.check, text: 'Sin incidencias.' });
+  return '<div class="notes">' + items.map((i) =>
+    '<div class="note ' + i.cls + '">' + i.icon + '<span>' + esc(i.text) + '</span></div>').join('') + '</div>';
+}
+
+function renderBody(tst, res) {
+  return '<div class="panes">' + renderRequestPane(tst, res) + renderResponsePane(tst, res) + '</div>'
+    + '<div class="notes-wrap">' + renderNotes(res) + '</div>';
+}
+
+function updateTestRow(id) {
+  const tst = CATALOG.find((x) => x.id === id);
+  const res = state.results[id];
+  const st = res ? res.state : 'pending';
+  const dotEl = $('dot-' + id);
+  const sideDot = $('sidedot-' + id);
+  const msEl = $('ms-' + id);
+  if (dotEl) dotEl.className = 'dot ' + st;
+  if (sideDot) sideDot.className = 'dot ' + st;
+  if (msEl) msEl.textContent = st === 'running' ? '···' : (res && res.ms ? res.ms + ' ms' : '');
+  const body = $('body-' + id);
+  if (body) {
+    if (st === 'running') body.innerHTML = '<div class="empty">Ejecutando prueba…</div>';
+    else if (res) body.innerHTML = renderBody(tst, res);
+  }
+}
+
+function renderAllRows() {
+  for (const tst of CATALOG) updateTestRow(tst.id);
+  for (const g of GROUPS) updateGroupHeader(g.id);
+}
+
+function updateGroupHeader(gid) {
+  const tests = CATALOG.filter((x) => x.group === gid);
+  let pass = 0, warn = 0, fail = 0, skip = 0, done = 0;
+  for (const tst of tests) {
+    const r = state.results[tst.id];
+    if (!r || r.state === 'running') continue;
+    done++;
+    if (r.state === 'pass') pass++;
+    else if (r.state === 'warn') warn++;
+    else if (r.state === 'fail') fail++;
+    else skip++;
+  }
+  const label = done === 0 ? 'sin ejecutar' : (done + '/' + tests.length + (fail ? ' · ' + fail + ' fallo' + (fail > 1 ? 's' : '') : (warn ? ' · ' + warn + ' aviso' + (warn > 1 ? 's' : '') : '')));
+  const gc = $('gcounts-' + gid);
+  const sg = $('sg-stats-' + gid);
+  if (gc) {
+    gc.textContent = label;
+    gc.style.color = fail ? 'var(--err)' : (done === tests.length && !fail ? 'var(--ok)' : 'var(--muted)');
+  }
+  if (sg) {
+    sg.textContent = done === 0 ? String(tests.length) : (done + '/' + tests.length);
+    sg.style.color = fail ? 'var(--err)' : (done === tests.length && !fail ? 'var(--ok)' : 'var(--muted)');
+  }
+}
+
+function countStates() {
+  const c = { pass: 0, warn: 0, fail: 0, skip: 0, executed: 0, pending: 0 };
+  for (const tst of CATALOG) {
+    const r = state.results[tst.id];
+    if (!r || r.state === 'running') { c.pending++; continue; }
+    c.executed++;
+    if (r.state === 'pass') c.pass++;
+    else if (r.state === 'warn') c.warn++;
+    else if (r.state === 'fail') c.fail++;
+    else c.skip++;
+  }
+  return c;
+}
+
+function updateSummary() {
+  const c = countStates();
+  $('sum-pass').textContent = c.pass;
+  $('sum-warn').textContent = c.warn;
+  $('sum-fail').textContent = c.fail;
+  $('sum-skip').textContent = c.skip;
+  $('mini-pass').textContent = c.pass;
+  $('mini-warn').textContent = c.warn;
+  $('mini-fail').textContent = c.fail;
+  $('mini-skip').textContent = c.skip;
+  const dur = state.t0 ? (state.tEnd || performance.now()) - state.t0 : 0;
+  $('sum-time').textContent = state.t0 ? fmtDur(dur) : '—';
+  const pct = Math.round((c.executed / CATALOG.length) * 100);
+  $('sum-progress-fill').style.width = pct + '%';
+  $('sum-progress').classList.toggle('err', c.fail > 0);
+
+  const v = $('verdict');
+  const vt = $('verdict-text');
+  const vi = $('verdict-icon');
+  if (state.running) {
+    v.className = 'verdict idle';
+    vi.innerHTML = '<span class="dot running"></span>';
+    vt.innerHTML = 'Ejecutando suite… ' + c.executed + ' de ' + CATALOG.length + '<small>' + c.pass + ' OK · ' + c.warn + ' avisos · ' + c.fail + ' fallos · ' + c.skip + ' omitidas</small>';
+    return;
+  }
+  if (c.executed === 0) {
+    v.className = 'verdict idle';
+    vi.innerHTML = ICONS.dot;
+    vt.innerHTML = 'Listo para ejecutar<small>Pulsa «Ejecutar todo» para verificar los 18 endpoints HTTP y los 8 eventos de Socket.IO.</small>';
+  } else if (c.fail > 0) {
+    v.className = 'verdict err';
+    vi.innerHTML = ICONS.cross;
+    vt.innerHTML = 'Se detectaron ' + c.fail + ' fallo' + (c.fail > 1 ? 's' : '') + '<small>Los fallos marcan endpoints o sockets que no coinciden con la especificación del backend v2. Revisa el detalle de cada prueba.</small>';
+  } else if (c.warn > 0) {
+    v.className = 'verdict warn';
+    vi.innerHTML = ICONS.warn;
+    vt.innerHTML = 'API operativa con ' + c.warn + ' aviso' + (c.warn > 1 ? 's' : '') + '<small>Todo responde, pero hay comportamientos que difieren de la referencia (detalles en cada prueba).</small>';
+  } else if (c.pending > 0 || c.skip > 0) {
+    v.className = 'verdict idle';
+    vi.innerHTML = ICONS.dot;
+    vt.innerHTML = 'Ejecución parcial: ' + c.pass + ' OK · ' + c.skip + ' omitidas · ' + c.pending + ' pendientes<small>Ejecuta todo para un veredicto completo de las ' + CATALOG.length + ' pruebas.</small>';
+  } else {
+    v.className = 'verdict ok';
+    vi.innerHTML = ICONS.check;
+    vt.innerHTML = 'API verificada: ' + c.pass + ' de ' + CATALOG.length + ' pruebas sin fallos<small>Todos los endpoints HTTP y eventos de Socket.IO responden según la especificación del backend v2.</small>';
+  }
+}
+
+/* ---------------- Consola ---------------- */
+function appendLog(lineEl) {
+  const body = $('console-body');
+  body.appendChild(lineEl);
+  body.scrollTop = body.scrollHeight;
+}
+function logTest(tst, res, starting) {
+  const time = new Date().toTimeString().slice(0, 8);
+  const line = document.createElement('div');
+  if (starting) {
+    line.className = 'log-line run';
+    line.innerHTML = '<span class="lt">' + time + '</span><span class="lg">[' + esc(groupName(tst.group)) + ']</span><span class="lnm">' + esc(tst.name) + '</span><span class="st">···</span>';
+  } else {
+    const label = res.state === 'pass' ? 'OK' : res.state === 'warn' ? 'AVISO' : res.state === 'fail' ? 'FALLO' : 'OMITIDA';
+    let detail = '';
+    if (res.state === 'fail' && res.errors.length) detail = ' — ' + res.errors[0];
+    else if (res.state === 'skip' && res.notes.length) detail = ' — ' + res.notes[0];
+    else if (res.state === 'warn' && res.warnings.length) detail = ' — ' + res.warnings[0];
+    line.className = 'log-line ' + res.state;
+    line.innerHTML = '<span class="lt">' + time + '</span><span class="lg">[' + esc(groupName(tst.group)) + ']</span>'
+      + '<span class="lnm">' + esc(tst.name) + '</span>'
+      + '<span class="st">' + label + (res.ms ? ' · ' + res.ms + ' ms' : '') + '</span>'
+      + (detail ? '<span style="color:var(--muted)">' + esc(detail) + '</span>' : '');
+  }
+  appendLog(line);
+}
+function appendInfo(text) {
+  const time = new Date().toTimeString().slice(0, 8);
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = '<span class="lt">' + time + '</span><span class="lnm" style="color:var(--muted)">' + esc(text) + '</span>';
+  appendLog(line);
+}
+
+function renderDataChips() {
+  const d = state.ctx.data;
+  if (!d) return;
+  $('cfg-data-chips').innerHTML =
+    '<code>' + esc(d.emailA) + '</code> · <code>' + esc(d.emailB) + '</code> · '
+    + '<code>' + esc(d.groupName) + '</code> · <code>' + esc(d.boardTitle) + '</code>';
+}
+
+/* ============================================================
+   EXPORTES (Markdown / JSON)
+   ============================================================ */
+function mdCell(s) { return String(s == null ? '' : s).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ').slice(0, 140); }
+
+function buildMarkdown() {
+  const c = countStates();
+  const dur = state.t0 ? fmtDur(state.tEnd || performance.now() - state.t0) : '—';
+  let md = '# Reporte de pruebas — SprintHub Backend v2\n\n';
+  md += '- **Fecha:** ' + new Date().toLocaleString('es') + '\n';
+  md += '- **URL base:** ' + state.baseUrl + '\n';
+  md += '- **Duración:** ' + dur + '\n';
+  md += '- **Resultado:** ' + c.pass + ' pasaron · ' + c.warn + ' con aviso · ' + c.fail + ' fallaron · ' + c.skip + ' omitidas (de ' + CATALOG.length + ')\n\n';
+  md += '## Resumen por grupo\n\n| Grupo | OK | Avisos | Fallos | Omitidas |\n|---|---|---|---|---|\n';
+  for (const g of GROUPS) {
+    let p = 0, w = 0, f = 0, s = 0;
+    for (const tst of CATALOG.filter((x) => x.group === g.id)) {
+      const r = state.results[tst.id];
+      if (!r) continue;
+      if (r.state === 'pass') p++;
+      else if (r.state === 'warn') w++;
+      else if (r.state === 'fail') f++;
+      else if (r.state === 'skip') s++;
+    }
+    md += '| ' + g.name + ' | ' + p + ' | ' + w + ' | ' + f + ' | ' + s + ' |\n';
+  }
+  md += '\n## Detalle\n\n';
+  let i = 0;
+  for (const g of GROUPS) {
+    md += '### ' + g.name + '\n\n| # | Prueba | Objetivo | Resultado | Detalle | Duración |\n|---|---|---|---|---|---|\n';
+    for (const tst of CATALOG.filter((x) => x.group === g.id)) {
+      i++;
+      const r = state.results[tst.id];
+      const stateTxt = !r || r.state === 'running' ? 'PENDIENTE' : r.state === 'pass' ? 'OK' : r.state === 'warn' ? 'AVISO' : r.state === 'fail' ? 'FALLO' : 'OMITIDA';
+      let detail = '';
+      if (r && r.state === 'fail' && r.errors.length) detail = r.errors[0];
+      else if (r && r.state === 'warn' && r.warnings.length) detail = r.warnings[0];
+      else if (r && r.state === 'skip' && r.notes.length) detail = r.notes[0];
+      else if (r && r.response && typeof r.response.status === 'number') detail = 'HTTP ' + r.response.status;
+      md += '| ' + i + ' | ' + mdCell(tst.name) + ' | `' + mdCell(displayPath(tst)) + '` | ' + stateTxt + ' | ' + mdCell(detail) + ' | ' + (r && r.ms ? r.ms + ' ms' : '—') + ' |\n';
+    }
+    md += '\n';
+  }
+  const fails = CATALOG.filter((x) => state.results[x.id] && state.results[x.id].state === 'fail');
+  if (fails.length) {
+    md += '## Fallos detectados\n\n';
+    fails.forEach((tst, idx) => {
+      const r = state.results[tst.id];
+      md += (idx + 1) + '. **[' + groupName(tst.group) + '] ' + tst.name + '** — ' + r.errors.map(mdCell).join(' | ') + '\n';
+    });
+  }
+  return md;
+}
+
+function downloadFile(name, content, type) {
+  const blob = new Blob([content], { type: type + ';charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 400);
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch (e2) { return false; }
+  }
+}
+
+function buildJsonExport() {
+  const c = countStates();
+  return {
+    fecha: new Date().toISOString(),
+    urlBase: state.baseUrl,
+    duracionMs: state.t0 ? Math.round((state.tEnd || performance.now()) - state.t0) : null,
+    resumen: { total: CATALOG.length, pasaron: c.pass, avisos: c.warn, fallaron: c.fail, omitidas: c.skip },
+    pruebas: CATALOG.map((tst) => {
+      const r = state.results[tst.id];
+      return {
+        id: tst.id,
+        grupo: groupName(tst.group),
+        nombre: tst.name,
+        objetivo: displayPath(tst),
+        estado: !r || r.state === 'running' ? 'pendiente' : (r.state === 'pass' ? 'ok' : r.state),
+        duracionMs: r ? r.ms : null,
+        codigoHttp: r && r.response && typeof r.response.status === 'number' && r.response.status > 0 ? r.response.status : null,
+        errores: r ? r.errors : [],
+        avisos: r ? r.warnings : [],
+        solicitud: r ? r.request : null,
+        respuesta: r ? r.response : null,
+      };
+    }),
+  };
+}
+
+/* ============================================================
+   EVENTOS + INIT
+   ============================================================ */
+function updateEnvUI() {
+  $('env-url').textContent = state.baseUrl;
+  try {
+    $('cfg-socket-preview').textContent = new URL(state.baseUrl).origin;
+  } catch (e) {
+    $('cfg-socket-preview').textContent = '(URL inválida)';
+  }
+}
+
+function bindEvents() {
+  $('cfg-baseurl').addEventListener('change', () => {
+    let v = $('cfg-baseurl').value.trim().replace(/\/+$/, '');
+    if (v && !/^https?:\/\//.test(v)) v = 'http://' + v;
+    state.baseUrl = v || 'http://localhost:3000';
+    $('cfg-baseurl').value = state.baseUrl;
+    saveConfig();
+    updateEnvUI();
+  });
+  $('cfg-timeout').addEventListener('change', () => {
+    state.timeoutMs = parseInt($('cfg-timeout').value, 10) || 8000;
+    saveConfig();
+  });
+  $('cfg-cleanup').addEventListener('change', () => {
+    state.cleanup = $('cfg-cleanup').checked;
+    saveConfig();
+  });
+
+  $('btn-run').addEventListener('click', () => runTests(null));
+  $('btn-stop').addEventListener('click', () => {
+    state.abort = true;
+    $('btn-stop').disabled = true;
+    $('btn-stop').innerHTML = ICONS.stop + ' Deteniendo…';
+  });
+  $('btn-reset').addEventListener('click', () => {
+    if (state.running) return;
+    state.results = {};
+    state.ctx = {};
+    renderAllRows();
+    updateSummary();
+    $('cfg-data-chips').textContent = 'se generan al ejecutar';
+    appendInfo('Resultados reiniciados.');
+  });
+  $('btn-md').addEventListener('click', async () => {
+    const md = buildMarkdown();
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    downloadFile('reporte-sprinthub-' + stamp + '.md', md, 'text/markdown');
+    const ok = await copyText(md);
+    const btn = $('btn-md');
+    const orig = btn.innerHTML;
+    btn.innerHTML = ICONS.check + (ok ? ' MD copiado' : ' MD descargado');
+    setTimeout(() => { btn.innerHTML = orig; }, 1800);
+  });
+  $('btn-json').addEventListener('click', () => {
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    downloadFile('resultados-sprinthub-' + stamp + '.json', JSON.stringify(buildJsonExport(), null, 2), 'application/json');
+  });
+  $('btn-menu').addEventListener('click', () => $('layout').classList.toggle('side-open'));
+  $('btn-clear-log').addEventListener('click', () => { $('console-body').innerHTML = ''; });
+  $('btn-copy-log').addEventListener('click', async () => {
+    const ok = await copyText($('console-body').innerText);
+    const btn = $('btn-copy-log');
+    const orig = btn.textContent;
+    btn.textContent = ok ? 'Copiado' : 'Error';
+    setTimeout(() => { btn.textContent = orig; }, 1400);
+  });
+
+  document.addEventListener('click', (ev) => {
+    const toggle = ev.target.closest('[data-toggle]');
+    if (toggle) {
+      const id = toggle.getAttribute('data-toggle');
+      const row = $('row-' + id);
+      if (row) {
+        row.classList.toggle('open');
+        document.querySelectorAll('.side-item.active').forEach((el) => el.classList.remove('active'));
+        const side = $('side-' + id);
+        if (side) side.classList.add('active');
+      }
+      return;
+    }
+    const runGroup = ev.target.closest('[data-rungroup]');
+    if (runGroup) {
+      if (state.running) return;
+      const gid = runGroup.getAttribute('data-rungroup');
+      runTests(gid);
+      return;
+    }
+    const sideItem = ev.target.closest('.side-item[data-test]');
+    if (sideItem) {
+      const id = sideItem.getAttribute('data-test');
+      const row = $('row-' + id);
+      if (row) {
+        document.querySelectorAll('.trow.open').forEach((el) => el.classList.remove('open'));
+        row.classList.add('open');
+        document.querySelectorAll('.side-item.active').forEach((el) => el.classList.remove('active'));
+        sideItem.classList.add('active');
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (window.innerWidth <= 980) $('layout').classList.remove('side-open');
+      }
+    }
+  });
+}
+
+function init() {
+  loadConfig();
+  $('cfg-baseurl').value = state.baseUrl;
+  $('cfg-timeout').value = String(state.timeoutMs);
+  $('cfg-cleanup').checked = state.cleanup;
+  updateEnvUI();
+  renderSidebar();
+  renderResults();
+  updateSummary();
+  bindEvents();
+  appendInfo('Suite cargada: ' + CATALOG.length + ' pruebas listas (' + GROUPS.map((g) => g.name).join(' · ') + ').');
+  appendInfo('Las pruebas con archivo adjuntan un PNG real de 256×256 generado en el navegador.');
+}
+
+init();
+</script>
+</body>
+</html>
