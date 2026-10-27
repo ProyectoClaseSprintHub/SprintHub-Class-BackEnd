@@ -9,7 +9,7 @@ try {
 
   env = envSchema.parse({
     port: process.env.PORT,
-    mongodburi: process.env.MONGODB_URI,
+    mongodburi: process.env.MONGODB_URi,
     jwtsecret: process.env.JWT_SECRET,
     corsOrigin: process.env.CORS_ORIGIN,
     serverUrl: process.env.SERVER_URL,
@@ -20,8 +20,7 @@ try {
 
 } catch (error: unknown) {
   
-  const errorMessage = error instanceof ZodError ? error.message : 'Error desconocido';
-  throw new Error(`Variables de entorno no configuradas ${errorMessage}`);
+  throw new Error(`Variables de entorno no configuradas ${error}`);
 
 }
 
